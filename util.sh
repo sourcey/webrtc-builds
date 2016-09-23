@@ -77,6 +77,13 @@ function check::webrtcbuilds::deps() {
     ensure-package lbzip2
     ensure-package lsb-release
     ;;
+  win)
+    VISUAL_STUDIO_TOOLS=${VS140COMNTOOLS:-}
+    if [ -z VISUAL_STUDIO_TOOLS ]; then
+      echo "Building under Microsoft Windows requires Microsoft Visual Studio 2015"
+      exit 1
+    fi
+;;
   esac
 }
 
@@ -145,39 +152,127 @@ function patch() {
   local enable_rtti="$3"
 
   pushd $outdir/src >/dev/null
-  # This removes the examples from being built.
-  sed -i.bak 's|"//webrtc/examples",|#"//webrtc/examples",|' BUILD.gn
-  # This patches a GN error with the video_loopback executable depending on a
-  # test but since we disable building tests GN detects a dependency error.
-  # Replacing the outer conditional with 'rtc_include_tests' works around this.
-  sed -i.bak 's|if (!build_with_chromium)|if (rtc_include_tests)|' webrtc/BUILD.gn
-  # Enable RTTI if required by removing the 'no_rtti' compiler flag
-  if [ $enable_rtti = 1 ]; then
-    echo "Enabling RTTI"
-    sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' chromium/src/build/config/BUILDCONFIG.gn
-  fi
+    # This removes the examples from being built.
+    sed -i.bak 's|"//webrtc/examples",|#"//webrtc/examples",|' BUILD.gn
+    # This patches a GN error with the video_loopback executable depending on a
+    # test but since we disable building tests GN detects a dependency error.
+    # Replacing the outer conditional with 'rtc_include_tests' works around this.
+    sed -i.bak 's|if (!build_with_chromium)|if (rtc_include_tests)|' webrtc/BUILD.gn
+    # Enable RTTI if required by removing the 'no_rtti' compiler flag
+    if [ $enable_rtti = 1 ]; then
+      echo "Enabling RTTI"
+      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' chromium/src/build/config/BUILDCONFIG.gn
+    fi
+  popd >/dev/null
+}
+
+# This function compiles a single library using Microsoft Visual C++ for a
+# Microsoft Windows (32/64-bit) target. This function is separate from the
+# other compile functions because of differences using the Microsoft tools:
+#
+# The Microsoft Windows tools use different file extensions than the other tools:
+#  '.obj' as the object file extension, instead of '.o'
+# '.lib' as the static library file extension, instead of '.a'
+# '.dll' as the shared library file extension, instead of '.so'
+#
+# The Microsoft Windows tools have different names than the other tools:
+# 'lib' as the librarian, instead of 'ar'. 'lib' must be found through the path
+# variable $VS140COMNTOOLS.
+#
+# The Microsoft tools that target Microsoft Windows run only under
+# Microsoft Windows, so the build and target systems are the same.
+#
+# $1 the output directory, 'Debug', 'Debug_x64', 'Release', or 'Release_x64'
+# $2 additional gn arguments
+function compile-win() {
+  local outputdir="$1"
+  local gn_args="$2"
+  # local blacklist="$3|unittest|examples|main.o"
+
+  gn gen $outputdir --args="$gn_args"
+  pushd $outputdir >/dev/null
+    ninja -C .
+  popd >/dev/null
+}
+
+# This function compiles a single library for linux.
+#
+# $1 the output directory, 'Debug', or 'Release'
+# $2 additional gn arguments
+function compile-ninja() {
+  local outputdir="$1"
+  local gn_args="$2"
+
+  echo "Generating project files with: $gn_args"
+  gn gen $outputdir --args="$gn_args"
+  pushd $outputdir >/dev/null
+    ninja -C .
   popd >/dev/null
 }
 
 # This function combines build artifact objects into one library named by
 # 'outputlib'.
-# $1: The list of object file paths to be combined
-# $2: The output library name.
-function combine-objs() {
-  local objs="$1"
-  local outputlib="$2"
+# $1: The platform
+# $2: The list of object file paths to be combined
+# $3: The blacklist objects to exclude from the library
+# $4: The output library name
+function combine() {
+  local platform="$1"
+  local outputdir="$2"
+
   # Blacklist objects from:
   # video_capture_external and device_info_external so that the video capture
   # module internal implementations gets linked.
   # unittest_main because it has a main function defined.
   # local blacklist="unittest_main.o|video_capture_external.o|device_info_external.o"
-  local blacklist="$3|unittest|examples|main.o"
+  local blacklist="$3"
+  local libname="$4"
 
-  echo "Combining object with blacklist: $blacklist"
+  #   local blacklist="unittest_main.obj|video_capture_external.obj|\
+  # device_info_external.obj"
+  pushd $outputdir >/dev/null
+    rm -f $libname.list
 
-  # Combine all objects into one static library. Prevent blacklisted objects
-  # such as ones containing a main function from being combined.
-  echo "$objs" | tr ' ' '\n' | grep -v -E $blacklist | xargs ar crs $outputlib
+    # Method 1: Collect all .o files from .ninja_deps and some missing intrinsics
+    local objlist=$(strings .ninja_deps | grep -o '.*\.o') #.obj
+    local extras=$(find \
+      ./obj/third_party/libvpx/libvpx_* \
+      ./obj/third_party/libjpeg_turbo/simd_asm -name *.o) #.obj
+    echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >$libname.list
+    echo "$extras" | tr ' ' '\n' >>$libname.list
+
+    # Method 2: Collect all .o files from output directory
+    # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
+    # echo "$objlist" >>$libname.list
+
+    echo "Combining library: $libname"
+    echo "Blacklist objects: $blacklist"
+
+    # Combine all objects into one static library. Prevent blacklisted objects
+    # such as ones containing a main function from being combined.
+    case $platform in
+    win)
+      rm -f $libname.lib #libwebrtc_full.lib
+      "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
+      ;;
+    *)
+      rm -f $libname.a
+      # cat $libname.list | grep -v -E $blacklist | xargs ar -crs $libname.a
+      cat $libname.list | grep -v -E $blacklist | xargs ar -rcT $libname.a
+      ;;
+    esac
+  popd >/dev/null
+  # local objs="$1"
+  # # Blacklist objects from:
+  # # video_capture_external and device_info_external so that the video capture
+  # # module internal implementations gets linked.
+  # # unittest_main because it has a main function defined.
+  # # local blacklist="unittest_main.o|video_capture_external.o|device_info_external.o"
+  # local blacklist="$2"
+  # local outputlib="$3"
+  #
+  # echo "Combining object with blacklist: $blacklist"
+  #
 }
 
 # This compiles the library.
@@ -188,75 +283,47 @@ function compile() {
   local outdir="$2"
   local target_os="$3"
   local target_cpu="$4"
-  local common_args="is_component_build=false rtc_include_tests=false"
+  local blacklist="$5"
+
+  # A note on default common args:
+  # `rtc_include_tests=false`: Disable all unit tests
+  # `enable_iterator_debugging=false`: Disable libstdc++ debugging facilities
+  # unless all your compiled applications and dependencies define _GLIBCXX_DEBUG=1.
+  # If not you will wind up with strange errors in Debug builds such as:
+  # undefined reference to `non-virtual thunk to cricket::VideoCapturer::
+  # AddOrUpdateSink(rtc::VideoSinkInterface<cricket::VideoFrame>*, rtc::VideoSinkWants const&)'
+  local common_args="rtc_include_tests=false enable_iterator_debugging=false" #is_component_build=false"
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
 
   pushd $outdir/src >/dev/null
   case $platform in
   win)
-    # do the build
-    python src/webrtc/build/gyp_webrtc.py
-    ninja -C src/out/Debug
-    ninja -C src/out/Release
+    # 32-bit build
+    compile-ninja "out/Debug" "$common_args $target_args" "$blacklist"
+    compile-ninja "out/Release" "$common_args $target_args is_debug=false" "$blacklist"
+    combine $platform "out/Debug" "$blacklist" libwebrtc_full
+    combine $platform "out/Release" "$blacklist" libwebrtc_full
 
     # 64-bit build
     GYP_DEFINES="target_arch=x64 $GYP_DEFINES"
-
-    # do the build
-    python src/webrtc/build/gyp_webrtc.py
-    ninja -C src/out/Debug_x64
-    ninja -C src/out/Release_x64
-
-    # combine all the static libraries into one called webrtc_full
-    # LIB.EXE /OUT:c.lib a.lib b.lib
-    "$VS120COMNTOOLS../../VC/bin/lib" /OUT:src/out/Debug/webrtc_full.lib src/out/Debug/*.lib
-    "$VS120COMNTOOLS../../VC/bin/lib" /OUT:src/out/Release/webrtc_full.lib src/out/Release/*.lib
-    "$VS120COMNTOOLS../../VC/bin/lib" /OUT:src/out/Debug_x64/webrtc_full.lib src/out/Debug_x64/*.lib
-    "$VS120COMNTOOLS../../VC/bin/lib" /OUT:src/out/Release_x64/webrtc_full.lib src/out/Release_x64/*.lib
+    compile-ninja "out/Debug_x64" "$common_args $target_args"
+    compile-ninja "out/Release_x64" "$common_args $target_args is_debug=false"
+    combine $platform "out/Debug_x64" "$blacklist" libwebrtc_full
+    combine $platform "out/Release_x64" "$blacklist" libwebrtc_full
     ;;
   *)
     # On Linux, use clang = false and sysroot = false to build using gcc.
     # Comment this out to use clang.
-    if [ $platform = 'linux' ]; then
-      target_args+=" is_clang=false use_sysroot=false"
-    fi
+    # NOTE: Disabling this because it was creating corrupted binaries with
+    # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
+    # if [ $platform = 'linux' ]; then
+    #   target_args+=" is_clang=false use_sysroot=false"
+    # fi
 
-    # Debug builds are component builds (shared libraries) by default unless
-    # is_component_build=false is passed to gn gen --args. Release builds are
-    # static by default.
-    gn gen out/Debug --args="$common_args $target_args"
-    pushd out/Debug >/dev/null
-      ninja -C .
-
-      rm -f libwebrtc_full.a
-      # Produce an ordered objects list by parsing .ninja_deps for strings
-      # matching .o files.
-      local objlist=$(strings .ninja_deps | grep -o '.*\.o')
-      combine-objs "$objlist" libwebrtc_full.a
-
-      # various intrinsics aren't included by default in .ninja_deps
-      local extras=$(find \
-        ./obj/third_party/libvpx/libvpx_* \
-        ./obj/third_party/libjpeg_turbo/simd_asm -name *.o)
-      combine-objs "$extras" libwebrtc_full.a
-    popd >/dev/null
-
-    # gn gen out/Release --args="is_debug=false $common_args $target_args"
-    # pushd out/Release >/dev/null
-    #   ninja -C .
-    #
-    #   rm -f libwebrtc_full.a
-    #   # Produce an ordered objects list by parsing .ninja_deps for strings
-    #   # matching .o files.
-    #   local objlist=$(strings .ninja_deps | grep -o '.*\.o')
-    #   combine-objs "$objlist" libwebrtc_full.a
-    #
-    #   # various intrinsics aren't included by default in .ninja_deps
-    #   local extras=$(find \
-    #     ./obj/third_party/libvpx/libvpx_* \
-    #     ./obj/third_party/libjpeg_turbo/simd_asm -name *.o)
-    #   combine-objs "$extras" libwebrtc_full.a
-    # popd >/dev/null
+    compile-ninja "out/Debug" "$common_args $target_args"
+    # compile-ninja "out/Release" "$common_args $target_args is_debug=false"
+    combine $platform "out/Debug" "$blacklist" libwebrtc_full
+    # combine $platform "out/Release" "$blacklist" libwebrtc_full
     ;;
   esac
   popd >/dev/null
@@ -287,7 +354,7 @@ function package() {
   popd >/dev/null
   # find and copy libraries
   pushd src/out >/dev/null
-  find . -maxdepth 3 \( -name *.so -o -name *webrtc_full* -o -name *.jar \) \
+  find . -maxdepth 3 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
     -exec $CP --parents '{}' $outdir/$label/lib ';'
   popd >/dev/null
 

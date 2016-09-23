@@ -142,6 +142,7 @@ function checkout() {
 function patch() {
   local platform="$1"
   local outdir="$2"
+  local enable_rtti="$3"
 
   pushd $outdir/src >/dev/null
   # This removes the examples from being built.
@@ -150,6 +151,11 @@ function patch() {
   # test but since we disable building tests GN detects a dependency error.
   # Replacing the outer conditional with 'rtc_include_tests' works around this.
   sed -i.bak 's|if (!build_with_chromium)|if (rtc_include_tests)|' webrtc/BUILD.gn
+  # Enable RTTI if required by removing the 'no_rtti' compiler flag
+  if [ $enable_rtti = 1 ]; then
+    echo "Enabling RTTI"
+    sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' chromium/src/build/config/BUILDCONFIG.gn
+  fi
   popd >/dev/null
 }
 
@@ -164,8 +170,10 @@ function combine-objs() {
   # video_capture_external and device_info_external so that the video capture
   # module internal implementations gets linked.
   # unittest_main because it has a main function defined.
-  local blacklist="unittest_main.o|video_capture_external.o|\
-device_info_external.o"
+  # local blacklist="unittest_main.o|video_capture_external.o|device_info_external.o"
+  local blacklist="$3|unittest|examples|main.o"
+
+  echo "Combining object with blacklist: $blacklist"
 
   # Combine all objects into one static library. Prevent blacklisted objects
   # such as ones containing a main function from being combined.
@@ -233,22 +241,22 @@ function compile() {
       combine-objs "$extras" libwebrtc_full.a
     popd >/dev/null
 
-    gn gen out/Release --args="is_debug=false $common_args $target_args"
-    pushd out/Release >/dev/null
-      ninja -C .
-
-      rm -f libwebrtc_full.a
-      # Produce an ordered objects list by parsing .ninja_deps for strings
-      # matching .o files.
-      local objlist=$(strings .ninja_deps | grep -o '.*\.o')
-      combine-objs "$objlist" libwebrtc_full.a
-
-      # various intrinsics aren't included by default in .ninja_deps
-      local extras=$(find \
-        ./obj/third_party/libvpx/libvpx_* \
-        ./obj/third_party/libjpeg_turbo/simd_asm -name *.o)
-      combine-objs "$extras" libwebrtc_full.a
-    popd >/dev/null
+    # gn gen out/Release --args="is_debug=false $common_args $target_args"
+    # pushd out/Release >/dev/null
+    #   ninja -C .
+    #
+    #   rm -f libwebrtc_full.a
+    #   # Produce an ordered objects list by parsing .ninja_deps for strings
+    #   # matching .o files.
+    #   local objlist=$(strings .ninja_deps | grep -o '.*\.o')
+    #   combine-objs "$objlist" libwebrtc_full.a
+    #
+    #   # various intrinsics aren't included by default in .ninja_deps
+    #   local extras=$(find \
+    #     ./obj/third_party/libvpx/libvpx_* \
+    #     ./obj/third_party/libjpeg_turbo/simd_asm -name *.o)
+    #   combine-objs "$extras" libwebrtc_full.a
+    # popd >/dev/null
     ;;
   esac
   popd >/dev/null

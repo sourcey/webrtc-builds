@@ -18,8 +18,9 @@ WebRTC build script.
 
 OPTIONS:
    -h             Show this message
+   -d             Debug mode. Print all executed commands.
    -o OUTDIR      Output directory. Default is 'out'
-   -b BRANCH      Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'n' is the release number.
+   -b BRANCH      Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'nn' is the release number.
    -r REVISION    Git SHA revision. Default is latest revision.
    -t TARGET OS   The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
    -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
@@ -28,7 +29,7 @@ OPTIONS:
 EOF
 }
 
-while getopts :o:b:r:t:c:l:e: OPTION; do
+while getopts :o:b:r:t:c:l:e:d OPTION; do
   case $OPTION in
   o) OUTDIR=$OPTARG ;;
   b) BRANCH=$OPTARG ;;
@@ -37,6 +38,7 @@ while getopts :o:b:r:t:c:l:e: OPTION; do
   c) TARGET_CPU=$OPTARG ;;
   l) BLACKLIST=$OPTARG ;;
   e) ENABLE_RTTI=$OPTARG ;;
+  d) DEBUG=$OPTARG ;;
   ?) usage; exit 1 ;;
   esac
 done
@@ -45,12 +47,15 @@ OUTDIR=${OUTDIR:-out}
 BRANCH=${BRANCH:-}
 BLACKLIST=${BLACKLIST:-}
 ENABLE_RTTI=${ENABLE_RTTI:-0}
+DEBUG=${DEBUG:-0}
 PROJECT_NAME=webrtcbuilds
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
 DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR=$DIR/depot_tools
 DEPOT_TOOLS_WIN_TOOLCHAIN=0
 PATH=$DEPOT_TOOLS_DIR:$DEPOT_TOOLS_DIR/python276_bin:$PATH
+
+[ "$DEBUG" = 1 ] && set -x
 
 mkdir -p $OUTDIR
 OUTDIR=$(cd $OUTDIR && pwd -P)

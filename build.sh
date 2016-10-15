@@ -43,7 +43,7 @@ done
 
 OUTDIR=${OUTDIR:-out}
 BRANCH=${BRANCH:-}
-BLACKLIST=${BLACKLIST:-unittest|examples|main.o|video_capture_external.o|device_info_external.o}
+BLACKLIST=${BLACKLIST:-}
 ENABLE_RTTI=${ENABLE_RTTI:-0}
 PROJECT_NAME=webrtcbuilds
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
@@ -93,8 +93,8 @@ patch $PLATFORM $OUTDIR $ENABLE_RTTI
 echo Compiling WebRTC
 compile $PLATFORM $OUTDIR "$TARGET_OS" "$TARGET_CPU" "$BLACKLIST"
 
-# echo Combining WebRTC library
-# combine $PLATFORM "$OUTDIR/src/out/Debug" "$BLACKLIST" libwebrtc_full
+echo Combining WebRTC library
+combine $PLATFORM "$OUTDIR/src/out/Debug" "$BLACKLIST" libwebrtc_full
 
 echo Packaging WebRTC
 # label is <projectname>-<rev-number>-<short-rev-sha>-<target-os>-<target-cpu>

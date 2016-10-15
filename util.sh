@@ -225,7 +225,10 @@ function combine() {
   # module internal implementations gets linked.
   # unittest_main because it has a main function defined.
   # local blacklist="unittest_main.o|video_capture_external.o|device_info_external.o"
-  local blacklist="$3"
+  local blacklist="unittest|examples|main.o|video_capture_external.o|device_info_external.o"
+  if [ -z "$3" ]; then
+    blacklist="$blacklist|$3"
+  fi
   local libname="$4"
 
   #   local blacklist="unittest_main.obj|video_capture_external.obj|\
@@ -262,17 +265,6 @@ function combine() {
       ;;
     esac
   popd >/dev/null
-  # local objs="$1"
-  # # Blacklist objects from:
-  # # video_capture_external and device_info_external so that the video capture
-  # # module internal implementations gets linked.
-  # # unittest_main because it has a main function defined.
-  # # local blacklist="unittest_main.o|video_capture_external.o|device_info_external.o"
-  # local blacklist="$2"
-  # local outputlib="$3"
-  #
-  # echo "Combining object with blacklist: $blacklist"
-  #
 }
 
 # This compiles the library.
@@ -321,9 +313,9 @@ function compile() {
     # fi
 
     compile-ninja "out/Debug" "$common_args $target_args"
-    # compile-ninja "out/Release" "$common_args $target_args is_debug=false"
+    compile-ninja "out/Release" "$common_args $target_args is_debug=false"
     combine $platform "out/Debug" "$blacklist" libwebrtc_full
-    # combine $platform "out/Release" "$blacklist" libwebrtc_full
+    combine $platform "out/Release" "$blacklist" libwebrtc_full
     ;;
   esac
   popd >/dev/null

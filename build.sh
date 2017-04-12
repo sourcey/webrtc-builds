@@ -25,7 +25,7 @@ OPTIONS:
    -t TARGET OS   The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
    -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
    -l BLACKLIST   Blacklisted *.o objects to exclude from the static library.
-   -e ENABLE_RTTI Compile WebRTC with RTII enabled.
+   -e             Compile WebRTC with RTII enabled.
 EOF
 }
 
@@ -37,8 +37,8 @@ while getopts :o:b:r:t:c:l:e:d OPTION; do
   t) TARGET_OS=$OPTARG ;;
   c) TARGET_CPU=$OPTARG ;;
   l) BLACKLIST=$OPTARG ;;
-  e) ENABLE_RTTI=$OPTARG ;;
-  d) DEBUG=$OPTARG ;;
+  e) ENABLE_RTTI=1 ;;
+  d) DEBUG=1 ;;
   ?) usage; exit 1 ;;
   esac
 done

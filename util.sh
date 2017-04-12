@@ -165,7 +165,7 @@ function patch() {
     # Enable RTTI if required by removing the 'no_rtti' compiler flag
     if [ $enable_rtti = 1 ]; then
       echo "Enabling RTTI"
-      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' chromium/src/build/config/BUILDCONFIG.gn
+      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' build/config/BUILDCONFIG.gn
     fi
   popd >/dev/null
 }

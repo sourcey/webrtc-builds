@@ -158,10 +158,12 @@ function patch() {
   pushd $outdir/src >/dev/null
     # This removes the examples from being built.
     sed -i.bak 's|"//webrtc/examples",|#"//webrtc/examples",|' BUILD.gn
+
     # This patches a GN error with the video_loopback executable depending on a
     # test but since we disable building tests GN detects a dependency error.
     # Replacing the outer conditional with 'rtc_include_tests' works around this.
-    sed -i.bak 's|if (!build_with_chromium)|if (rtc_include_tests)|' webrtc/BUILD.gn
+    # sed -i.bak 's|if (!build_with_chromium)|if (rtc_include_tests)|' webrtc/BUILD.gn
+
     # Enable RTTI if required by removing the 'no_rtti' compiler flag
     if [ $enable_rtti = 1 ]; then
       echo "Enabling RTTI"
@@ -175,7 +177,7 @@ function patch() {
 # other compile functions because of differences using the Microsoft tools:
 #
 # The Microsoft Windows tools use different file extensions than the other tools:
-#  '.obj' as the object file extension, instead of '.o'
+# '.obj' as the object file extension, instead of '.o'
 # '.lib' as the static library file extension, instead of '.a'
 # '.dll' as the shared library file extension, instead of '.so'
 #
@@ -188,16 +190,16 @@ function patch() {
 #
 # $1 the output directory, 'Debug', 'Debug_x64', 'Release', or 'Release_x64'
 # $2 additional gn arguments
-function compile-win() {
-  local outputdir="$1"
-  local gn_args="$2"
-  # local blacklist="$3|unittest|examples|main.o"
-
-  gn gen $outputdir --args="$gn_args"
-  pushd $outputdir >/dev/null
-    ninja -C .
-  popd >/dev/null
-}
+# function compile-win() {
+#   local outputdir="$1"
+#   local gn_args="$2"
+#   # local blacklist="$3|unittest|examples|main.o"
+#
+#   gn gen $outputdir --args="$gn_args"
+#   pushd $outputdir >/dev/null
+#     ninja -C .
+#   popd >/dev/null
+# }
 
 # This function compiles a single library for linux.
 #
@@ -225,30 +227,28 @@ function combine() {
   local outputdir="$2"
 
   # Blacklist objects from:
-  # video_capture_external and device_info_external so that the video capture
-  # module internal implementations gets linked.
+  # video_capture_external and device_info_external so that the internal video
+  # capture module implementations get linked.
   # unittest_main because it has a main function defined.
-  # local blacklist="unittest_main.o|video_capture_external.o|device_info_external.o"
   local blacklist="unittest|examples|main.o|video_capture_external.o|device_info_external.o"
-  if [ -z "$3" ]; then
-    blacklist="$blacklist|$3"
-  fi
+  [ "$3" ] && blacklist="$blacklist|$3"
   local libname="$4"
 
-  #   local blacklist="unittest_main.obj|video_capture_external.obj|\
+  # local blacklist="unittest_main.obj|video_capture_external.obj|\
   # device_info_external.obj"
   pushd $outputdir >/dev/null
     rm -f $libname.list
 
-    # Method 1: Collect all .o files from .ninja_deps and some missing intrinsics
+    # Method 1: Collect all .o* files from .ninja_deps and some missing intrinsics
     local objlist=$(strings .ninja_deps | grep -o '.*\.o') #.obj
     local extras=$(find \
       ./obj/third_party/libvpx/libvpx_* \
       ./obj/third_party/libjpeg_turbo/simd_asm -name *.o) #.obj
+    echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist
     echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >$libname.list
     echo "$extras" | tr ' ' '\n' >>$libname.list
 
-    # Method 2: Collect all .o files from output directory
+    # Method 2: Collect all .o* files from output directory
     # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
     # echo "$objlist" >>$libname.list
 
@@ -285,9 +285,6 @@ function compile() {
   # `rtc_include_tests=false`: Disable all unit tests
   # `enable_iterator_debugging=false`: Disable libstdc++ debugging facilities
   # unless all your compiled applications and dependencies define _GLIBCXX_DEBUG=1.
-  # If not you will wind up with strange errors in Debug builds such as:
-  # undefined reference to `non-virtual thunk to cricket::VideoCapturer::
-  # AddOrUpdateSink(rtc::VideoSinkInterface<cricket::VideoFrame>*, rtc::VideoSinkWants const&)'
   local common_args="rtc_include_tests=false enable_iterator_debugging=false" #is_component_build=false"
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
 
@@ -297,29 +294,29 @@ function compile() {
     # 32-bit build
     compile-ninja "out/Debug" "$common_args $target_args" "$blacklist"
     compile-ninja "out/Release" "$common_args $target_args is_debug=false" "$blacklist"
-    combine $platform "out/Debug" "$blacklist" libwebrtc_full
-    combine $platform "out/Release" "$blacklist" libwebrtc_full
+    # combine $platform "out/Debug" "$blacklist" libwebrtc_full
+    # combine $platform "out/Release" "$blacklist" libwebrtc_full
 
     # 64-bit build
-    GYP_DEFINES="target_arch=x64 $GYP_DEFINES"
-    compile-ninja "out/Debug_x64" "$common_args $target_args"
-    compile-ninja "out/Release_x64" "$common_args $target_args is_debug=false"
-    combine $platform "out/Debug_x64" "$blacklist" libwebrtc_full
-    combine $platform "out/Release_x64" "$blacklist" libwebrtc_full
+    # GYP_DEFINES="target_arch=x64 $GYP_DEFINES"
+    # compile-ninja "out/Debug_x64" "$common_args $target_args"
+    # compile-ninja "out/Release_x64" "$common_args $target_args is_debug=false"
+    # combine $platform "out/Debug_x64" "$blacklist" libwebrtc_full
+    # combine $platform "out/Release_x64" "$blacklist" libwebrtc_full
     ;;
   *)
     # On Linux, use clang = false and sysroot = false to build using gcc.
     # Comment this out to use clang.
-    # NOTE: Disabling this because it was creating corrupted binaries with
+    # NOTE: This was creating corrupted binaries with
     # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
-    # if [ $platform = 'linux' ]; then
-    #   target_args+=" is_clang=false use_sysroot=false"
-    # fi
+    if [ $platform = 'linux' ]; then
+      target_args+=" is_clang=false use_sysroot=false"
+    fi
 
     compile-ninja "out/Debug" "$common_args $target_args"
     compile-ninja "out/Release" "$common_args $target_args is_debug=false"
-    combine $platform "out/Debug" "$blacklist" libwebrtc_full
-    combine $platform "out/Release" "$blacklist" libwebrtc_full
+    # combine $platform "out/Debug" "$blacklist" libwebrtc_full
+    # combine $platform "out/Release" "$blacklist" libwebrtc_full
     ;;
   esac
   popd >/dev/null

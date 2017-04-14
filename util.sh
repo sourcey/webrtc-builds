@@ -56,10 +56,67 @@ function ensure-package() {
   fi
 }
 
-# Makes sure all webrtcbuilds dependencies are present.
+# Check if any of the arguments is executable (logical OR condition).
+# Using plain "type" without any option because has-binary is intended
+# to know if there is a program that one can call regardless if it is
+# an alias, builtin, function, or a disk file that would be executed.
+function has-binary () {
+  type "$1" &> /dev/null ;
+}
+
+# Setup Visual Studio build environment variables.
+function init-msenv() {
+  if [ -z $VS140COMNTOOLS ]; then
+    echo "Building under Microsoft Windows requires Microsoft Visual Studio 2015 Update 2"
+    exit 1
+  fi
+
+  export DEPOT_TOOLS_WIN_TOOLCHAIN=0
+
+  pushd "${VS140COMNTOOLS}../../VC" >/dev/null
+    OLDIFS=$IFS
+    IFS=$'\n'
+    msvars=$(cmd //c "vcvarsall.bat $TARGET_CPU && set")
+
+    for line in $msvars; do
+      case $line in
+      INCLUDE=*|LIB=*|LIBPATH=*) 
+        export $line ;;
+      PATH=*) 
+        PATH=$(echo $line | sed \
+          -e 's/PATH=//' \
+          -e 's/\([a-zA-Z]\):[\\\/]/\/\1\//g' \
+          -e 's/\\/\//g' \
+          -e 's/;\//:\//g'):$PATH
+        export PATH
+        ;;
+      esac
+    done
+    IFS=$OLDIFS
+  popd >/dev/null
+}
+
+# Makes sure all build environment dependencies are present.
 # $1: The platform type.
-function check::webrtcbuilds::deps() {
+function check::build::deps() {
   local platform="$1"
+  local target_cpu="$2"
+
+  # Required programs
+  REQUIRED_PROGS=(
+    bash
+    sed
+    git
+    openssl
+    find
+    grep
+    xargs
+    pwd
+    curl
+    rm
+    cat
+    strings
+  )
 
   case $platform in
   mac)
@@ -82,13 +139,18 @@ function check::webrtcbuilds::deps() {
     ensure-package lsb-release lsb_release
     ;;
   win)
-    VISUAL_STUDIO_TOOLS=${VS140COMNTOOLS:-}
-    if [ -z VISUAL_STUDIO_TOOLS ]; then
-      echo "Building under Microsoft Windows requires Microsoft Visual Studio 2015"
+    init-msenv
+    ;;
+  esac
+
+  # Check that required programs exist on the system.
+  # If they are missing, we abort.
+  for f in "${REQUIRED_PROGS[@]}" ; do
+    if ! has-binary "$f" ; then
+      echo "Error: '$f' is not installed." >&2
       exit 1
     fi
-;;
-  esac
+  done
 }
 
 # Makes sure all WebRTC build dependencies are present.
@@ -126,6 +188,7 @@ function checkout() {
     echo The target OS has changed. Refetching sources for the new target OS
     rm -rf src .gclient*
   fi
+
   # Fetch only the first-time, otherwise sync.
   if [ ! -d src ]; then
     case $target_os in
@@ -140,8 +203,16 @@ function checkout() {
       ;;
     esac
   fi
+
+  # Remove all unstaged files that can break gclient sync
+  # NOTE: need to redownload resources
+  # pushd src >/dev/null
+  # git reset --hard && git clean -dfx
+  # popd >/dev/null
+
   # Checkout the specific revision after fetch
   gclient sync --force --revision $revision
+
   # Cache the target OS
   echo $target_os > $outdir/.webrtcbuilds_target_os
   popd >/dev/null
@@ -164,47 +235,20 @@ function patch() {
     # Replacing the outer conditional with 'rtc_include_tests' works around this.
     # sed -i.bak 's|if (!build_with_chromium)|if (rtc_include_tests)|' webrtc/BUILD.gn
 
-    # Enable RTTI if required by removing the 'no_rtti' compiler flag
+    # Enable RTTI if required by removing the 'no_rtti' compiler flag.
+    # This fixes issues when compiling WebRTC with other libraries that have RTTI enabled.
     if [ $enable_rtti = 1 ]; then
       echo "Enabling RTTI"
-      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' build/config/BUILDCONFIG.gn
+      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' \
+        build/config/BUILDCONFIG.gn
     fi
   popd >/dev/null
 }
 
-# This function compiles a single library using Microsoft Visual C++ for a
-# Microsoft Windows (32/64-bit) target. This function is separate from the
-# other compile functions because of differences using the Microsoft tools:
-#
-# The Microsoft Windows tools use different file extensions than the other tools:
-# '.obj' as the object file extension, instead of '.o'
-# '.lib' as the static library file extension, instead of '.a'
-# '.dll' as the shared library file extension, instead of '.so'
-#
-# The Microsoft Windows tools have different names than the other tools:
-# 'lib' as the librarian, instead of 'ar'. 'lib' must be found through the path
-# variable $VS140COMNTOOLS.
-#
-# The Microsoft tools that target Microsoft Windows run only under
-# Microsoft Windows, so the build and target systems are the same.
-#
-# $1 the output directory, 'Debug', 'Debug_x64', 'Release', or 'Release_x64'
-# $2 additional gn arguments
-# function compile-win() {
-#   local outputdir="$1"
-#   local gn_args="$2"
-#   # local blacklist="$3|unittest|examples|main.o"
-#
-#   gn gen $outputdir --args="$gn_args"
-#   pushd $outputdir >/dev/null
-#     ninja -C .
-#   popd >/dev/null
-# }
-
 # This function compiles a single library for linux.
 #
-# $1 the output directory, 'Debug', or 'Release'
-# $2 additional gn arguments
+# $1 The output directory, 'out/$TARGET_CPU/Debug', or 'out/$TARGET_CPU/Release'
+# $2 Additional gn arguments
 function compile-ninja() {
   local outputdir="$1"
   local gn_args="$2"
@@ -218,6 +262,16 @@ function compile-ninja() {
 
 # This function combines build artifact objects into one library named by
 # 'outputlib'.
+#
+# The Microsoft Windows tools use different file extensions than the other tools:
+# '.obj' as the object file extension, instead of '.o'
+# '.lib' as the static library file extension, instead of '.a'
+# '.dll' as the shared library file extension, instead of '.so'
+#
+# The Microsoft Windows tools have different names than the other tools:
+# 'lib' as the librarian, instead of 'ar'. 'lib' must be found through the path
+# variable $VS140COMNTOOLS.
+#
 # $1: The platform
 # $2: The list of object file paths to be combined
 # $3: The blacklist objects to exclude from the library
@@ -231,41 +285,40 @@ function combine() {
   # capture module implementations get linked.
   # unittest_main because it has a main function defined.
   local blacklist="unittest|examples|main.o|video_capture_external.o|device_info_external.o"
-  [ "$3" ] && blacklist="$blacklist|$3"
-  local libname="$4"
+  [ ! -z $3 ] && blacklist="$blacklist|$3"
+
+  if [ $platform = 'win' ]; then
+    local extname='obj'
+  else
+    local extname='o'
+  fi
 
   # local blacklist="unittest_main.obj|video_capture_external.obj|\
   # device_info_external.obj"
   pushd $outputdir >/dev/null
-    rm -f $libname.list
+    rm -f libwebrtc_full.*
 
     # Method 1: Collect all .o* files from .ninja_deps and some missing intrinsics
-    local objlist=$(strings .ninja_deps | grep -o '.*\.o') #.obj
+    local objlist=$(strings .ninja_deps | grep -o ".*\.$extname")
     local extras=$(find \
       ./obj/third_party/libvpx/libvpx_* \
-      ./obj/third_party/libjpeg_turbo/simd_asm -name *.o) #.obj
-    echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist
-    echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >$libname.list
-    echo "$extras" | tr ' ' '\n' >>$libname.list
+      ./obj/third_party/libjpeg_turbo/simd_asm -name *.$extname)
+    echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
+    echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
 
     # Method 2: Collect all .o* files from output directory
     # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
-    # echo "$objlist" >>$libname.list
-
-    echo "Combining library: $libname"
-    echo "Blacklist objects: $blacklist"
+    # echo "$objlist" >$libname.list
 
     # Combine all objects into one static library. Prevent blacklisted objects
     # such as ones containing a main function from being combined.
     case $platform in
     win)
-      rm -f $libname.lib #libwebrtc_full.lib
-      "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
+      "$VS140COMNTOOLS../../VC/bin/lib" /OUT:libwebrtc_full.lib @libwebrtc_full.list
       ;;
     *)
-      rm -f $libname.a
       # cat $libname.list | grep -v -E $blacklist | xargs ar -crs $libname.a
-      cat $libname.list | grep -v -E $blacklist | xargs ar -rcT $libname.a
+      cat $libname.list | grep -v -E $blacklist | xargs ar -rcT libwebrtc_full.a
       ;;
     esac
   popd >/dev/null
@@ -285,44 +338,29 @@ function compile() {
   # `rtc_include_tests=false`: Disable all unit tests
   # `enable_iterator_debugging=false`: Disable libstdc++ debugging facilities
   # unless all your compiled applications and dependencies define _GLIBCXX_DEBUG=1.
-  local common_args="rtc_include_tests=false enable_iterator_debugging=false" #is_component_build=false"
+  local common_args="rtc_include_tests=false enable_iterator_debugging=false"
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
 
   pushd $outdir/src >/dev/null
   case $platform in
-  win)
-    # 32-bit build
-    compile-ninja "out/Debug" "$common_args $target_args" "$blacklist"
-    compile-ninja "out/Release" "$common_args $target_args is_debug=false" "$blacklist"
-    # combine $platform "out/Debug" "$blacklist" libwebrtc_full
-    # combine $platform "out/Release" "$blacklist" libwebrtc_full
-
-    # 64-bit build
-    # GYP_DEFINES="target_arch=x64 $GYP_DEFINES"
-    # compile-ninja "out/Debug_x64" "$common_args $target_args"
-    # compile-ninja "out/Release_x64" "$common_args $target_args is_debug=false"
-    # combine $platform "out/Debug_x64" "$blacklist" libwebrtc_full
-    # combine $platform "out/Release_x64" "$blacklist" libwebrtc_full
-    ;;
-  *)
-    # On Linux, use clang = false and sysroot = false to build using gcc.
+  linux)
+    # On Linux, use clang=false and sysroot=false to build using gcc.
     # Comment this out to use clang.
     # NOTE: This was creating corrupted binaries with
     # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
-    if [ $platform = 'linux' ]; then
-      target_args+=" is_clang=false use_sysroot=false"
-    fi
-
-    compile-ninja "out/Debug" "$common_args $target_args"
-    compile-ninja "out/Release" "$common_args $target_args is_debug=false"
-    # combine $platform "out/Debug" "$blacklist" libwebrtc_full
-    # combine $platform "out/Release" "$blacklist" libwebrtc_full
+    target_args+=" is_clang=false use_sysroot=false"
     ;;
   esac
+
+  compile-ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
+  compile-ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
+  combine $platform "out/$TARGET_CPU/Debug" "$blacklist"
+  combine $platform "out/$TARGET_CPU/Release" "$blacklist"
+
   popd >/dev/null
 }
 
-# This packages a compiled build into a zip file in the output directory.
+# This packages a compiled build into an archive file in the output directory.
 # $1: The platform type.
 # $2: The output directory.
 # $3: Label of the package.
@@ -338,39 +376,83 @@ function package() {
   else
     CP='cp'
   fi
-  pushd $outdir >/dev/null
-  # create directory structure
-  mkdir -p $label/include $label/lib
-  # find and copy header files
-  pushd src >/dev/null
-  find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
-  popd >/dev/null
-  # find and copy libraries
-  pushd src/out >/dev/null
-  find . -maxdepth 3 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
-    -exec $CP --parents '{}' $outdir/$label/lib ';'
-  popd >/dev/null
 
-  # for linux, add pkgconfig files
-  if [ $platform = 'linux' ]; then
-    configs="Debug Release"
-    for cfg in $configs; do
-      mkdir -p $label/lib/$cfg/pkgconfig
-      CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
-        $label/lib/$cfg/pkgconfig/libwebrtc_full.pc
-    done
-  fi
-
-  # remove first for cleaner builds
-  rm -f $label.zip
-
-  # zip up the package
   if [ $platform = 'win' ]; then
-    $DEPOT_TOOLS/win_toolchain/7z/7z.exe a -tzip $label.zip $label
+    OUTFILE=$label.7z
   else
-    zip -r $label.zip $label >/dev/null
+    OUTFILE=$label.tar.gz
   fi
+
+  pushd $outdir >/dev/null
+
+    # # Create directory structure
+    # mkdir -p $label/include $label/lib
+    # pushd src >/dev/null
+
+    #   # Find and copy header files
+    #   find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
+
+    #   # Find and copy dependencies
+    #   # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
+    #   find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
+    #     grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
+    #     grep -v /third_party | \
+    #     xargs -I '{}' $CP --parents '{}' $outdir/$label/include
+    # popd >/dev/null
+
+    # # Find and copy libraries
+    # pushd src/out >/dev/null
+    #   find . -maxdepth 3 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
+    #     -exec $CP --parents '{}' $outdir/$label/lib ';'
+    # popd >/dev/null
+
+    # # for linux, add pkgconfig files
+    # if [ $platform = 'linux' ]; then
+    #   configs="Debug Release"
+    #   for cfg in $configs; do
+    #     mkdir -p $label/lib/$cfg/pkgconfig
+    #     CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
+    #       $label/lib/$cfg/pkgconfig/libwebrtc_full.pc
+    #   done
+    # fi
+
+    # # Archive up the package
+    # rm -f $OUTFILE
+    # pushd $label >/dev/null
+    # if [ $platform = 'win' ]; then
+    #   $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../$OUTFILE
+    # else
+    #   tar -czvf ../$OUTFILE lib/$TARGET_CPU linclude
+    # fi
+    # popd >/dev/null
+
+    # Create a JSON manifest
+    rm -f $label.json
+    cat << EOF > $label.json
+{
+  file: "$OUTFILE",
+  date: "${current-rev-date}",
+  branch: "${BRANCH}",
+  revision: "${REVISION_NUMBER}",
+  sha: "${REVISION}",
+  crc: "$(file-crc $OUTFILE)",
+  target_os: "${TARGET_OS}",
+  target_cpu: "${TARGET_CPU}"
+}
+EOF
   popd >/dev/null
+}
+
+# This returns the latest revision date from the current git repo.
+function current-rev-date() {
+  git log -1 --format=%cd
+}
+
+# This returns the latest revision from the git repo.
+# $1: The git repo URL
+function file-crc() {
+  local file_path="$1"
+   md5sum $file_path | grep -o '^\S*'
 }
 
 # This returns the latest revision from the git repo.

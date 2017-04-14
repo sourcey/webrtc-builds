@@ -1,27 +1,30 @@
-# webrtcbuilds
-==============
+# WebRTC Automated Builds
 
-The goal of webrtcbuilds is to provide a single standalone static library and
-package for WebRTC.
+These cross platform build scripts make it a pinch to build and package WebRTC. 
+Just run the scripts and sit back while the heavy lifting is done for you.
 
-## Current Platforms and Prerequisites
+## Supported platforms
 
-* OSX (highly recommend [Homebrew](http://brew.sh/) is installed)
-* Windows (highly recommend [Visual Studio Community 2013]
-(http://www.chromium.org/developers/how-tos/build-instructions-windows) at least
-and a [Bash shell such as Git for Windows](https://msysgit.github.io) is
-installed)
-* Linux (tested on Ubuntu 16.04 64-bit)
+* **OSX**: [Homebrew](http://brew.sh/ recommend). Build for 'mac' and 'ios'.
+* **Windows**: Visual Studio Community 2015 Update 2 or newer
+with a bash shell such as [Git for Windows](https://msysgit.github.io) or [MSYS](http://www.mingw.org/wiki/msys)
+installed.
+* **Linux**: Debian or Ubuntu flavour with `apt-get` available. Build for 'linux' and 'android'.
 
-## How to run
+## Usage
 
 `./build.sh` to build the latest version of WebRTC.
 
-Or with options.
+For example, to cross compile both x64 and x86 libraries for iOS you would run:
+
+`./build.sh -c x64 -t ios`
+`./build.sh -c x86 -t ios`
+
+Or with options:
 
 ```
 Usage:
-   ./build.sh [OPTIONS]
+   build.sh [OPTIONS]
 
 OPTIONS:
    -h             Show this message
@@ -33,15 +36,17 @@ OPTIONS:
    -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
 ```
 
-## Where is the package
+The output packages will be saved to `{OUTDIR}/webrtcbuilds-<rev>-<sha>-<target-os>-<target-cpu>.<ext>`, where `<rev>` is the revision number of the commit, `<sha>` is the short git SHA
+of the commit, and `<target-os>-<target-cpu>` is the OS (linux, mac, win) and CPU (x64, x86) of the target environment.
 
-`out/webrtcbuilds-<rev>-<sha>-<target-os>-<target-cpu>.zip`
-where `<rev>` is the revision number of the commit, `<sha>` is the short git SHA
-of the commit, and `<target-os>-<target-cpu>` is the OS (linux, mac, win) and
-CPU (x64, x86) of the target environment.
+On Windows `7-Zip` is used for compressing packages, which produces vastly superiour output file size. On mac and linux the output file is `tar.gz`.
 
-## Documentation
+## Further reading
 
-Wiki: https://github.com/vsimon/webrtcbuilds/wiki
+The following links point to official WebRTC related documentation:
 
-Mailing List: http://groups.google.com/group/webrtcbuilds
+* [https://webrtc.org/native-code/development/](https://webrtc.org/native-code/development/)
+* [https://webrtc.org/native-code/development/prerequisite-sw/](https://webrtc.org/native-code/development/prerequisite-sw/)
+* [http://dev.chromium.org/developers/how-tos/install-depot-tools](http://dev.chromium.org/developers/how-tos/install-depot-tools)
+* [https://chromium.googlesource.com/chromium/src/+/master/docs/windows_build_instructions.md](https://chromium.googlesource.com/chromium/src/+/master/docs/windows_build_instructions.md)
+* [https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/quick_start.md](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/quick_start.md)

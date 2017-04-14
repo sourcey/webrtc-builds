@@ -385,50 +385,49 @@ function package() {
 
   pushd $outdir >/dev/null
 
-    # # Create directory structure
-    # mkdir -p $label/include $label/lib
-    # pushd src >/dev/null
+    # Create directory structure
+    mkdir -p $label/include $label/lib
+    pushd src >/dev/null
 
-    #   # Find and copy header files
-    #   find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
+      # Find and copy header files
+      find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
 
-    #   # Find and copy dependencies
-    #   # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
-    #   find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
-    #     grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
-    #     grep -v /third_party | \
-    #     xargs -I '{}' $CP --parents '{}' $outdir/$label/include
-    # popd >/dev/null
+      # Find and copy dependencies
+      # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
+      find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
+        grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
+        grep -v /third_party | \
+        xargs -I '{}' $CP --parents '{}' $outdir/$label/include
+    popd >/dev/null
 
-    # # Find and copy libraries
-    # pushd src/out >/dev/null
-    #   find . -maxdepth 3 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
-    #     -exec $CP --parents '{}' $outdir/$label/lib ';'
-    # popd >/dev/null
+    # Find and copy libraries
+    pushd src/out >/dev/null
+      find . -maxdepth 3 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
+        -exec $CP --parents '{}' $outdir/$label/lib ';'
+    popd >/dev/null
 
-    # # for linux, add pkgconfig files
-    # if [ $platform = 'linux' ]; then
-    #   configs="Debug Release"
-    #   for cfg in $configs; do
-    #     mkdir -p $label/lib/$cfg/pkgconfig
-    #     CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
-    #       $label/lib/$cfg/pkgconfig/libwebrtc_full.pc
-    #   done
-    # fi
+    # For linux, add pkgconfig files
+    if [ $platform = 'linux' ]; then
+      configs="Debug Release"
+      for cfg in $configs; do
+        mkdir -p $label/lib/$cfg/pkgconfig
+        CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
+          $label/lib/$cfg/pkgconfig/libwebrtc_full.pc
+      done
+    fi
 
-    # # Archive up the package
-    # rm -f $OUTFILE
-    # pushd $label >/dev/null
-    # if [ $platform = 'win' ]; then
-    #   $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../$OUTFILE
-    # else
-    #   tar -czvf ../$OUTFILE lib/$TARGET_CPU linclude
-    # fi
-    # popd >/dev/null
+    # Archive up the package
+    rm -f $OUTFILE
+    pushd $label >/dev/null
+      if [ $platform = 'win' ]; then
+        $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../$OUTFILE
+      else
+        tar -czvf ../$OUTFILE lib/$TARGET_CPU linclude
+      fi
 
-    # Create a JSON manifest
-    rm -f $label.json
-    cat << EOF > $label.json
+      # Create a JSON manifest
+      rm -f $label.json
+      cat << EOF > $label.json
 {
   file: "$OUTFILE",
   date: "${current-rev-date}",
@@ -440,6 +439,7 @@ function package() {
   target_cpu: "${TARGET_CPU}"
 }
 EOF
+    popd >/dev/null
   popd >/dev/null
 }
 

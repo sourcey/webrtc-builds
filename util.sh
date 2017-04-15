@@ -377,6 +377,12 @@ function package() {
     CP='cp'
   fi
 
+  if [ $platform = 'win' ]; then
+    OUTFILE=$label.7z
+  else
+    OUTFILE=$label.tar.gz
+  fi
+
   pushd $outdir >/dev/null
 
     # Create directory structure

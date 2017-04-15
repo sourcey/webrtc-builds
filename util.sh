@@ -461,25 +461,25 @@ function manifest() {
 }
 EOF
 
-    # Merge JSON manifests
-    # node manifest.js
-    rm -f manifest.json
-    echo '[' > manifest.json
-    files=(*.json)
-    (
-      set -- "${files[@]}"
-      until (( $# == 1 )); do
-        if [ ! $1 = 'manifest.json' ]; then
-          cat $1 >> manifest.json
-          echo ',' >> manifest.json
-        fi
-        shift
-      done    
-      cat $1 >> manifest.json
-    )
-    sed -i ':a;N;$!ba;s/\n//g' manifest.json
-    sed -i 's/{/\n  {/g' manifest.json
-    echo ']' >> manifest.json
+    # # Merge JSON manifests
+    # # node manifest.js
+    # rm -f manifest.json
+    # echo '[' > manifest.json
+    # files=(*.json)
+    # (
+    #   set -- "${files[@]}"
+    #   until (( $# == 1 )); do
+    #     if [ ! $1 = 'manifest.json' ]; then
+    #       cat $1 >> manifest.json
+    #       echo ',' >> manifest.json
+    #     fi
+    #     shift
+    #   done    
+    #   cat $1 >> manifest.json
+    # )
+    # sed -i ':a;N;$!ba;s/\n//g' manifest.json
+    # sed -i 's/{/\n  {/g' manifest.json
+    # echo ']' >> manifest.json
 
   popd >/dev/null
 }

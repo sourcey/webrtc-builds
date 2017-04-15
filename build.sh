@@ -107,5 +107,6 @@ compile $PLATFORM $OUTDIR "$TARGET_OS" "$TARGET_CPU" "$BLACKLIST"
 LABEL=$PROJECT_NAME-$REVISION_NUMBER-$(short-rev $REVISION)-$TARGET_OS-$TARGET_CPU
 echo "Packaging WebRTC: $LABEL" 
 package $PLATFORM $OUTDIR $LABEL $DIR/resource
+manifest $PLATFORM $OUTDIR $LABEL
 
 echo Build successful

@@ -377,16 +377,10 @@ function package() {
     CP='cp'
   fi
 
-  if [ $platform = 'win' ]; then
-    OUTFILE=$label.7z
-  else
-    OUTFILE=$label.tar.gz
-  fi
-
   pushd $outdir >/dev/null
 
     # Create directory structure
-    mkdir -p $label/include $label/lib
+    mkdir -p $label/include $label/lib ../packages
     pushd src >/dev/null
 
       # Find and copy header files
@@ -420,26 +414,67 @@ function package() {
     rm -f $OUTFILE
     pushd $label >/dev/null
       if [ $platform = 'win' ]; then
-        $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../$OUTFILE
+        $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../packages/$OUTFILE
       else
-        tar -czvf ../$OUTFILE lib/$TARGET_CPU linclude
+        tar -czvf ../packages/$OUTFILE lib/$TARGET_CPU linclude
       fi
+    popd >/dev/null
 
-      # Create a JSON manifest
-      rm -f $label.json
-      cat << EOF > $label.json
+  popd >/dev/null
+}
+
+# This builds and merges the output manifest.
+# $1: The platform type.
+# $2: The output directory.
+# $3: Label of the package.
+function manifest() {
+  local platform="$1"
+  local outdir="$2"
+  local label="$3"
+
+  if [ $platform = 'win' ]; then
+    OUTFILE=$label.7z
+  else
+    OUTFILE=$label.tar.gz
+  fi
+
+  mkdir -p $outdir/packages
+  pushd $outdir/packages >/dev/null
+    # Create a JSON manifest
+    rm -f $label.json
+    cat << EOF > $label.json
 {
-  file: "$OUTFILE",
-  date: "${current-rev-date}",
-  branch: "${BRANCH}",
-  revision: "${REVISION_NUMBER}",
-  sha: "${REVISION}",
-  crc: "$(file-crc $OUTFILE)",
-  target_os: "${TARGET_OS}",
-  target_cpu: "${TARGET_CPU}"
+  "file": "$OUTFILE",
+  "date": "$(current-rev-date)",
+  "branch": "${BRANCH}",
+  "revision": "${REVISION_NUMBER}",
+  "sha": "${REVISION}",
+  "crc": "$(file-crc $OUTFILE)",
+  "target_os": "${TARGET_OS}",
+  "target_cpu": "${TARGET_CPU}"
 }
 EOF
-    popd >/dev/null
+
+    # Merge JSON manifests
+    # node manifest.js
+    rm -f manifest.json
+    echo '[' > manifest.json
+    files=(*.json)
+    (
+      set -- "${files[@]}"
+      until (( $# == 1 )); do
+        if [ ! $1 = 'manifest.json' ]; then
+          cat $1 >> manifest.json
+          echo ',' >> manifest.json
+        fi
+        shift
+      done    
+      cat $1 >> manifest.json
+    )
+    sed -i ':a;N;$!ba;s/\n//g' manifest.json
+    sed -i 's/{/\n  {/g' manifest.json
+    echo ']' >> manifest.json
+
   popd >/dev/null
 }
 

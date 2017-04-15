@@ -13,12 +13,16 @@ installed.
 
 ## Usage
 
-`./build.sh` to build the latest version of WebRTC.
+To build the latest version of WebRTC just type:
 
-For example, to cross compile both x64 and x86 libraries for iOS you would run:
+```
+./build.sh
 
-`./build.sh -c x64 -t ios`
-`./build.sh -c x86 -t ios`
+# To cross compile both x64 and x86 libraries for iOS you would run:
+./build.sh -c x64 -t ios
+./build.sh -c x86 -t ios
+
+```
 
 Or with options:
 

@@ -87,9 +87,9 @@ function init-msenv() {
 
     for line in $msvars; do
       case $line in
-      INCLUDE=*|LIB=*|LIBPATH=*) 
+      INCLUDE=*|LIB=*|LIBPATH=*)
         export $line ;;
-      PATH=*) 
+      PATH=*)
         PATH=$(echo $line | sed \
           -e 's/PATH=//' \
           -e 's/\([a-zA-Z]\):[\\\/]/\/\1\//g' \
@@ -219,7 +219,7 @@ function checkout() {
   # Remove all unstaged files that can break gclient sync
   # NOTE: need to redownload resources
   pushd src >/dev/null
-  # git reset --hard && 
+  # git reset --hard &&
   git clean -f
   popd >/dev/null
 
@@ -293,6 +293,13 @@ function combine() {
   local platform="$1"
   local outputdir="$2"
 
+  # Blacklist objects from:
+  # video_capture_external and device_info_external so that the internal video
+  # capture module implementations get linked.
+  # unittest_main because it has a main function defined.
+  local blacklist="unittest|examples|tools|yasm/|protobuf_lite|main.o|video_capture_external.o|device_info_external.o"
+  [ ! -z $3 ] && blacklist="$blacklist|$3"
+
   # local blacklist="unittest_main.obj|video_capture_external.obj|\
   # device_info_external.obj"
   pushd $outputdir >/dev/null
@@ -300,48 +307,44 @@ function combine() {
 
     # Method 1: Collect all .o* files from .ninja_deps and some missing intrinsics
 
-    # Blacklist objects from:
-    # video_capture_external and device_info_external so that the internal video
-    # capture module implementations get linked.
-    # unittest_main because it has a main function defined.
-    # local blacklist="unittest|examples|tools|yasm/|protobuf_lite|main.o|video_capture_external.o|device_info_external.o"
-    # [ ! -z $3 ] && blacklist="$blacklist|$3"
-
     # if [ $platform = 'win' ]; then
     #   local extname='obj'
     # else
     #   local extname='o'
     # fi
 
-    # local objlist=$(strings .ninja_deps | grep -o ".*\.$extname")
-    # local extras=$(find \
-    #   ./obj/third_party/libvpx/libvpx_* \
-    #   ./obj/third_party/libjpeg_turbo/simd_asm \
-    #   ./obj/third_party/boringssl/boringssl_asm -name *.o)
-    # echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
-    # echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
 
     # Method 2: Collect all .o* files from output directory
     # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
     # echo "$objlist" >$libname.list
 
-    # Method 3: Merge only the libraries we need
-    if [ $platform = 'win' ]; then
-      local whitelist="boringssl.dll.lib|protobuf_lite.dll.lib|webrtc\.lib|field_trial_default.lib|metrics_default.lib"
-    else
-      local whitelist="boringssl.a|protobuf_full.a|webrtc\.a|field_trial_default.a|metrics_default.a"
-    fi
-    cat .ninja_log | tr '\t' '\n' | grep -E $whitelist | sort -u >libwebrtc_full.list
-
     # Combine all objects into one static library. Prevent blacklisted objects
     # such as ones containing a main function from being combined.
     case $platform in
     win)
+
+      # Method 3: Merge only the libraries we need
+      if [ $platform = 'win' ]; then
+        local whitelist="boringssl.dll.lib|protobuf_lite.dll.lib|webrtc\.lib|field_trial_default.lib|metrics_default.lib"
+      # else
+        # local whitelist="boringssl\.a|protobuf_full\.a|webrtc\.a|field_trial_default.a|metrics_default.a"
+      fi
+      cat .ninja_log | tr '\t' '\n' | grep -E $whitelist | sort -u >libwebrtc_full.list
+
       # TODO: Support VS 2017
       "$VS140COMNTOOLS../../VC/bin/lib" /OUT:libwebrtc_full.lib @libwebrtc_full.list
       ;;
     *)
-      cat $libname.list | grep -v -E $blacklist | xargs ar -rcT libwebrtc_full.a # ar -crs $libname.a
+      local objlist=$(strings .ninja_deps | grep -o ".*\.o")
+      # local extras=$(find \
+      #   obj/third_party/libvpx/libvpx_* \
+      #   obj/third_party/libjpeg_turbo/simd_asm \
+      #   obj/third_party/boringssl/boringssl_asm -name *.o)
+      echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
+      # echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
+
+      cat libwebrtc_full.list | grep -v -E $blacklist | xargs ar -rcs libwebrtc_full.a # ar -crs $libname.a
+      # cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
       ;;
     esac
   popd >/dev/null
@@ -370,15 +373,15 @@ function compile() {
   # `clang=false` and `sysroot=false` to build using gcc.
   # NOTE: This was creating corrupted binaries with
   # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
-  target_args+=" is_clang=false"
-  [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
+  # target_args+=" is_clang=false"
+  # [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
 
   pushd $outdir/src >/dev/null
     compile-ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
     compile-ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
 
     # Combine output libraries on platforms that support it.
-    # Windows is disabled because `lib.exe` does not like linking with the 
+    # Windows is disabled because `lib.exe` does not like linking with the
     # yasm compiled .o objects.
     # if [ ! $platform = 'win' ]; then
       combine $platform "out/$TARGET_CPU/Debug" "$blacklist"
@@ -413,7 +416,7 @@ function package() {
   pushd $outdir >/dev/null
 
     # Create directory structure
-    mkdir -p $label/include $label/lib/$TARGET_CPU ../packages
+    mkdir -p $label/include $label/lib/$TARGET_CPU packages
     pushd src >/dev/null
 
       # Find and copy header files
@@ -441,9 +444,9 @@ function package() {
     if [ $platform = 'linux' ]; then
       configs="Debug Release"
       for cfg in $configs; do
-        mkdir -p $label/lib/$cfg/pkgconfig
+        mkdir -p $label/lib/$TARGET_CPU/$cfg/pkgconfig
         CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
-          $label/lib/$cfg/pkgconfig/libwebrtc_full.pc
+          $label/lib/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc
       done
     fi
 
@@ -453,7 +456,7 @@ function package() {
       if [ $platform = 'win' ]; then
         $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../packages/$OUTFILE
       else
-        tar -czvf ../packages/$OUTFILE lib/$TARGET_CPU linclude
+        tar -czvf ../packages/$OUTFILE lib/$TARGET_CPU include
       fi
     popd >/dev/null
 
@@ -505,7 +508,7 @@ EOF
     #       echo ',' >> manifest.json
     #     fi
     #     shift
-    #   done    
+    #   done
     #   cat $1 >> manifest.json
     # )
     # sed -i ':a;N;$!ba;s/\n//g' manifest.json

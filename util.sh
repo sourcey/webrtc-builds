@@ -66,14 +66,21 @@ function has-binary () {
 
 # Setup Visual Studio build environment variables.
 function init-msenv() {
-  if [ -z $VS140COMNTOOLS ]; then
-    echo "Building under Microsoft Windows requires Microsoft Visual Studio 2015 Update 2"
+
+  # Rudimentary support for VS2017 in default install location due to
+  # lack of VS1S0COMNTOOLS environment variable.
+  if [ -d "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build" ]; then
+    vcvars_path="C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build"
+  elif [ ! -z "$VS140COMNTOOLS" ]; then
+    vcvars_path="${VS140COMNTOOLS}../../VC"
+  else
+    echo "Building under Microsoft Windows requires Microsoft Visual Studio 2015 Update 3"
     exit 1
   fi
 
   export DEPOT_TOOLS_WIN_TOOLCHAIN=0
 
-  pushd "${VS140COMNTOOLS}../../VC" >/dev/null
+  pushd "$vcvars_path" >/dev/null
     OLDIFS=$IFS
     IFS=$'\n'
     msvars=$(cmd //c "vcvarsall.bat $TARGET_CPU && set")
@@ -103,6 +110,7 @@ function check::build::deps() {
   local target_cpu="$2"
 
   # Required programs
+  # TODO: check before running platform specific commands
   REQUIRED_PROGS=(
     bash
     sed
@@ -115,15 +123,19 @@ function check::build::deps() {
     curl
     rm
     cat
-    strings
   )
+  # strings
 
   case $platform in
   mac)
+    REQUIRED_PROGS=( "${REQUIRED_PROGS[@]}" brew )
+
     # for GNU version of cp: gcp
     which gcp || brew install coreutils
     ;;
   linux)
+    REQUIRED_PROGS=( "${REQUIRED_PROGS[@]}" strings apt-get )
+
     if ! grep -v \# /etc/apt/sources.list | grep -q multiverse ; then
       echo "*** Warning: The Multiverse repository is probably not enabled ***"
       echo "*** which is required for things like msttcorefonts.           ***"
@@ -206,9 +218,10 @@ function checkout() {
 
   # Remove all unstaged files that can break gclient sync
   # NOTE: need to redownload resources
-  # pushd src >/dev/null
-  # git reset --hard && git clean -dfx
-  # popd >/dev/null
+  pushd src >/dev/null
+  # git reset --hard && 
+  git clean -f
+  popd >/dev/null
 
   # Checkout the specific revision after fetch
   gclient sync --force --revision $revision
@@ -224,7 +237,7 @@ function checkout() {
 function patch() {
   local platform="$1"
   local outdir="$2"
-  local enable_rtti="$3"
+  #local enable_rtti="$3"
 
   pushd $outdir/src >/dev/null
     # This removes the examples from being built.
@@ -237,11 +250,11 @@ function patch() {
 
     # Enable RTTI if required by removing the 'no_rtti' compiler flag.
     # This fixes issues when compiling WebRTC with other libraries that have RTTI enabled.
-    if [ $enable_rtti = 1 ]; then
-      echo "Enabling RTTI"
-      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' \
-        build/config/BUILDCONFIG.gn
-    fi
+    # if [ $enable_rtti = 1 ]; then
+    #   echo "Enabling RTTI"
+    #   sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' \
+    #     build/config/BUILDCONFIG.gn
+    # fi
   popd >/dev/null
 }
 
@@ -280,45 +293,55 @@ function combine() {
   local platform="$1"
   local outputdir="$2"
 
-  # Blacklist objects from:
-  # video_capture_external and device_info_external so that the internal video
-  # capture module implementations get linked.
-  # unittest_main because it has a main function defined.
-  local blacklist="unittest|examples|main.o|video_capture_external.o|device_info_external.o"
-  [ ! -z $3 ] && blacklist="$blacklist|$3"
-
-  if [ $platform = 'win' ]; then
-    local extname='obj'
-  else
-    local extname='o'
-  fi
-
   # local blacklist="unittest_main.obj|video_capture_external.obj|\
   # device_info_external.obj"
   pushd $outputdir >/dev/null
     rm -f libwebrtc_full.*
 
     # Method 1: Collect all .o* files from .ninja_deps and some missing intrinsics
-    local objlist=$(strings .ninja_deps | grep -o ".*\.$extname")
-    local extras=$(find \
-      ./obj/third_party/libvpx/libvpx_* \
-      ./obj/third_party/libjpeg_turbo/simd_asm -name *.$extname)
-    echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
-    echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
+
+    # Blacklist objects from:
+    # video_capture_external and device_info_external so that the internal video
+    # capture module implementations get linked.
+    # unittest_main because it has a main function defined.
+    # local blacklist="unittest|examples|tools|yasm/|protobuf_lite|main.o|video_capture_external.o|device_info_external.o"
+    # [ ! -z $3 ] && blacklist="$blacklist|$3"
+
+    # if [ $platform = 'win' ]; then
+    #   local extname='obj'
+    # else
+    #   local extname='o'
+    # fi
+
+    # local objlist=$(strings .ninja_deps | grep -o ".*\.$extname")
+    # local extras=$(find \
+    #   ./obj/third_party/libvpx/libvpx_* \
+    #   ./obj/third_party/libjpeg_turbo/simd_asm \
+    #   ./obj/third_party/boringssl/boringssl_asm -name *.o)
+    # echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
+    # echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
 
     # Method 2: Collect all .o* files from output directory
     # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
     # echo "$objlist" >$libname.list
 
+    # Method 3: Merge only the libraries we need
+    if [ $platform = 'win' ]; then
+      local whitelist="boringssl.dll.lib|protobuf_lite.dll.lib|webrtc\.lib|field_trial_default.lib|metrics_default.lib"
+    else
+      local whitelist="boringssl.a|protobuf_full.a|webrtc\.a|field_trial_default.a|metrics_default.a"
+    fi
+    cat .ninja_log | tr '\t' '\n' | grep -E $whitelist | sort -u >libwebrtc_full.list
+
     # Combine all objects into one static library. Prevent blacklisted objects
     # such as ones containing a main function from being combined.
     case $platform in
     win)
+      # TODO: Support VS 2017
       "$VS140COMNTOOLS../../VC/bin/lib" /OUT:libwebrtc_full.lib @libwebrtc_full.list
       ;;
     *)
-      # cat $libname.list | grep -v -E $blacklist | xargs ar -crs $libname.a
-      cat $libname.list | grep -v -E $blacklist | xargs ar -rcT libwebrtc_full.a
+      cat $libname.list | grep -v -E $blacklist | xargs ar -rcT libwebrtc_full.a # ar -crs $libname.a
       ;;
     esac
   popd >/dev/null
@@ -336,27 +359,31 @@ function compile() {
 
   # A note on default common args:
   # `rtc_include_tests=false`: Disable all unit tests
+  # `is_component_build=true`: Build with dynamic CRT
   # `enable_iterator_debugging=false`: Disable libstdc++ debugging facilities
   # unless all your compiled applications and dependencies define _GLIBCXX_DEBUG=1.
-  local common_args="rtc_include_tests=false enable_iterator_debugging=false"
+  local common_args="rtc_include_tests=false use_rtti=true" # is_component_build=true
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
+  [ $ENABLE_RTTI = 1 ] && target_args+=" use_rtti=true"
+
+  # Comment this out to use clang.
+  # `clang=false` and `sysroot=false` to build using gcc.
+  # NOTE: This was creating corrupted binaries with
+  # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
+  target_args+=" is_clang=false"
+  [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
 
   pushd $outdir/src >/dev/null
-  case $platform in
-  linux)
-    # On Linux, use clang=false and sysroot=false to build using gcc.
-    # Comment this out to use clang.
-    # NOTE: This was creating corrupted binaries with
-    # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
-    target_args+=" is_clang=false use_sysroot=false"
-    ;;
-  esac
+    compile-ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
+    compile-ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
 
-  compile-ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
-  compile-ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
-  combine $platform "out/$TARGET_CPU/Debug" "$blacklist"
-  combine $platform "out/$TARGET_CPU/Release" "$blacklist"
-
+    # Combine output libraries on platforms that support it.
+    # Windows is disabled because `lib.exe` does not like linking with the 
+    # yasm compiled .o objects.
+    # if [ ! $platform = 'win' ]; then
+      combine $platform "out/$TARGET_CPU/Debug" "$blacklist"
+      combine $platform "out/$TARGET_CPU/Release" "$blacklist"
+    # fi
   popd >/dev/null
 }
 
@@ -386,7 +413,7 @@ function package() {
   pushd $outdir >/dev/null
 
     # Create directory structure
-    mkdir -p $label/include $label/lib ../packages
+    mkdir -p $label/include $label/lib/$TARGET_CPU ../packages
     pushd src >/dev/null
 
       # Find and copy header files
@@ -401,9 +428,13 @@ function package() {
     popd >/dev/null
 
     # Find and copy libraries
-    pushd src/out >/dev/null
-      find . -maxdepth 3 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
-        -exec $CP --parents '{}' $outdir/$label/lib ';'
+    pushd src/out/$TARGET_CPU >/dev/null
+      # find . -name *.so -o -name *.dll -o -name *.lib -o -name *.jar | \
+      #   grep -E 'webrtc_full|/webrtc\.|boringssl.dll|protobuf_lite|system_wrappers' | \
+      #   xargs -I '{}' $CP --parents '{}' $outdir/$label/lib/$TARGET_CPU
+
+      find . -maxdepth 2 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
+        -exec $CP --parents '{}' $outdir/$label/lib/$TARGET_CPU ';'
     popd >/dev/null
 
     # For linux, add pkgconfig files

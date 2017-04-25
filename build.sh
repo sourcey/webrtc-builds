@@ -23,14 +23,14 @@ OPTIONS:
    -t TARGET OS   The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
    -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
    -l BLACKLIST   List *.o objects to exclude from the static library.
-   -e             Compile WebRTC with RTII enabled.
-   -f             Build only mode. Skip repo sync and dependency checks, just build, compile and package.
+   -e ENABLE_RTTI Compile WebRTC with RTII enabled. Default is '1'.
+   -x             Express build mode. Skip repo sync and dependency checks, just build, compile and package.
    -d             Debug mode. Print all executed commands.
    -h             Show this message
 EOF
 }
 
-while getopts :o:b:r:t:c:l:exd OPTION; do
+while getopts :o:b:r:t:c:l:e:xd OPTION; do
   case $OPTION in
   o) OUTDIR=$OPTARG ;;
   b) BRANCH=$OPTARG ;;
@@ -38,7 +38,7 @@ while getopts :o:b:r:t:c:l:exd OPTION; do
   t) TARGET_OS=$OPTARG ;;
   c) TARGET_CPU=$OPTARG ;;
   l) BLACKLIST=$OPTARG ;;
-  e) ENABLE_RTTI=1 ;;
+  e) ENABLE_RTTI=OPTARG ;;
   x) BUILD_ONLY=1 ;;
   d) DEBUG=1 ;;
   ?) usage; exit 1 ;;
@@ -48,10 +48,10 @@ done
 OUTDIR=${OUTDIR:-out}
 BRANCH=${BRANCH:-}
 BLACKLIST=${BLACKLIST:-}
-ENABLE_RTTI=${ENABLE_RTTI:-0}
+ENABLE_RTTI=${ENABLE_RTTI:-1}
 BUILD_ONLY=${BUILD_ONLY:-0}
 DEBUG=${DEBUG:-0}
-PROJECT_NAME=webrtcbuilds
+PROJECT_NAME=webrtc
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
 DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR=$DIR/depot_tools
@@ -102,6 +102,7 @@ fi
 
 echo Compiling WebRTC
 compile $PLATFORM $OUTDIR "$TARGET_OS" "$TARGET_CPU" "$BLACKLIST"
+# combine $PLATFORM "$OUTDIR/src/out/$TARGET_CPU/Release" "$BLACKLIST"
 
 # label is <projectname>-<rev-number>-<short-rev-sha>-<target-os>-<target-cpu>
 LABEL=$PROJECT_NAME-$REVISION_NUMBER-$(short-rev $REVISION)-$TARGET_OS-$TARGET_CPU

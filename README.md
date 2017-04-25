@@ -6,7 +6,7 @@ Just run the scripts and sit back while the heavy lifting is done for you.
 ## Supported platforms
 
 * **OSX**: [Homebrew](http://brew.sh/ recommend). Build for 'mac' and 'ios'.
-* **Windows**: Visual Studio Community 2015 Update 2 or newer
+* **Windows**: Visual Studio Community 2015 Update 3 or newer
 with a bash shell such as [Git for Windows](https://msysgit.github.io) or [MSYS](http://www.mingw.org/wiki/msys)
 installed.
 * **Linux**: Debian or Ubuntu flavour with `apt-get` available. Build for 'linux' and 'android'.
@@ -20,7 +20,11 @@ To build the latest version of WebRTC just type:
 
 # To cross compile both x64 and x86 libraries for iOS you would run:
 ./build.sh -c x64 -t ios
-./build.sh -c x86 -t ios
+./build.sh -c x86 -t ios -x
+
+# To cross compile both x64 and x86 libraries for iOS you would run:
+./build.sh -c x64 -b branch-heads/57
+./build.sh -c x86 -b branch-heads/57 -x
 
 ```
 
@@ -28,16 +32,22 @@ Or with options:
 
 ```
 Usage:
-   build.sh [OPTIONS]
+   $0 [OPTIONS]
+
+WebRTC automated build script.
 
 OPTIONS:
-   -h             Show this message
-   -d             Debug mode. Print all executed commands.
    -o OUTDIR      Output directory. Default is 'out'
-   -b BRANCH      Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'n' is the release number.
+   -b BRANCH      Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'nn' is the release number.
    -r REVISION    Git SHA revision. Default is latest revision.
    -t TARGET OS   The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
    -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
+   -l BLACKLIST   List *.o objects to exclude from the static library.
+   -e             Compile WebRTC with RTII enabled.
+   -f             Build only mode. Skip repo sync and dependency checks, just build, compile and package.
+   -d             Debug mode. Print all executed commands.
+   -h             Show this message
+EOF
 ```
 
 The output packages will be saved to `{OUTDIR}/webrtcbuilds-<rev>-<sha>-<target-os>-<target-cpu>.<ext>`, where `<rev>` is the revision number of the commit, `<sha>` is the short git SHA

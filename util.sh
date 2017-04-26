@@ -303,6 +303,18 @@ function combine() {
   # local blacklist="unittest_main.obj|video_capture_external.obj|\
   # device_info_external.obj"
   pushd $outputdir >/dev/null
+
+  # local extras=$(find \
+  #   obj/third_party/libvpx/libvpx_* -name "*\.o")
+  # echo "$extras" | tr ' ' '\n' >>libwebrtc_full1.list
+  #
+  # cat libwebrtc_full1.list | grep -v -E $blacklist | xargs ar -cru libwebrtc_full1.a # ar -crs $libname.a
+  # # cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
+  # # local extras=$(find \
+  # #   obj/third_party/libvpx/libvpx_* -name "*\.o")
+  #   # echo "$extras"
+  #   exit
+
     rm -f libwebrtc_full.*
 
     # Method 1: Collect all .o* files from .ninja_deps and some missing intrinsics
@@ -312,7 +324,6 @@ function combine() {
     # else
     #   local extname='o'
     # fi
-
 
     # Method 2: Collect all .o* files from output directory
     # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
@@ -335,16 +346,36 @@ function combine() {
       "$VS140COMNTOOLS../../VC/bin/lib" /OUT:libwebrtc_full.lib @libwebrtc_full.list
       ;;
     *)
-      local objlist=$(strings .ninja_deps | grep -o ".*\.o")
+#       ar -M <<EOM
+#         CREATE libwebrtc_full.a
+#         ADDLIB obj/third_party/boringssl/libboringssl.a
+#         ADDLIB obj/third_party/protobuf/libprotobuf_full.a
+#         ADDLIB obj/webrtc/system_wrappers/libfield_trial_default.a
+#         ADDLIB obj/webrtc/system_wrappers/libmetrics_default.a
+#         ADDLIB obj/webrtc/libwebrtc.a
+#         SAVE
+#         END
+# EOM
+#       ranlib libwebrtc_full.a
+
+      # local objlist=$(strings .ninja_deps | grep -o ".*\.o")
       # local extras=$(find \
       #   obj/third_party/libvpx/libvpx_* \
       #   obj/third_party/libjpeg_turbo/simd_asm \
-      #   obj/third_party/boringssl/boringssl_asm -name *.o)
-      echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
+      #   obj/third_party/boringssl/boringssl_asm -name "*\.o")ll
+      # echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
       # echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
+      #
+      # cat libwebrtc_full.list | grep -v -E $blacklist | xargs ar -rcs libwebrtc_full.a # ar -crs $libname.a
+      # # cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
+      # exit
 
-      cat libwebrtc_full.list | grep -v -E $blacklist | xargs ar -rcs libwebrtc_full.a # ar -crs $libname.a
-      # cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
+
+      # Method 2: Collect all .o* files from output directory
+      local objlist=$(find obj -name '*.o') #$(find . -name '*.o' | grep -v -E $blacklist)
+      echo "$objlist" >libwebrtc_full.list
+      cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
+      exit
       ;;
     esac
   popd >/dev/null
@@ -360,6 +391,8 @@ function compile() {
   local target_cpu="$4"
   local blacklist="$5"
 
+  # local common_args="" FIXME
+  # local target_args=""
   # A note on default common args:
   # `rtc_include_tests=false`: Disable all unit tests
   # `is_component_build=true`: Build with dynamic CRT
@@ -370,22 +403,22 @@ function compile() {
   [ $ENABLE_RTTI = 1 ] && target_args+=" use_rtti=true"
 
   # Comment this out to use clang.
-  # `clang=false` and `sysroot=false` to build using gcc.
+  # `is_clang=false` and `sysroot=false` to build using gcc.
   # NOTE: This was creating corrupted binaries with
   # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
-  # target_args+=" is_clang=false"
-  # [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
+  target_args+=" is_clang=false"
+  [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
 
   pushd $outdir/src >/dev/null
     compile-ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
-    compile-ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
+    # compile-ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
 
     # Combine output libraries on platforms that support it.
     # Windows is disabled because `lib.exe` does not like linking with the
     # yasm compiled .o objects.
     # if [ ! $platform = 'win' ]; then
       combine $platform "out/$TARGET_CPU/Debug" "$blacklist"
-      combine $platform "out/$TARGET_CPU/Release" "$blacklist"
+      # combine $platform "out/$TARGET_CPU/Release" "$blacklist"
     # fi
   popd >/dev/null
 }

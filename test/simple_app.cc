@@ -3,8 +3,27 @@
 #include "webrtc/api/peerconnectioninterface.h"
 #include "webrtc/api/test/fakeconstraints.h"
 #include "webrtc/media/engine/webrtcvideocapturerfactory.h"
+#include "webrtc/base/ssladapter.h"
+
+
+#include "json.hpp" // include nlohmann json
+
+// #include "scy/idler.h"
+// #include "scy/idler.h"
+// #include "scy/logger.h"
+using std::endl;
+// using namespace scy;
 
 int main(int argc, char* argv[]) {
+
+
+  // Setup WebRTC environment
+  rtc::LogMessage::LogToDebug(rtc::LS_VERBOSE); // LS_VERBOSE, LS_INFO, LERROR
+  // rtc::LogMessage::LogTimestamps();
+  // rtc::LogMessage::LogThreads();
+
+  rtc::InitializeSSL();
+
   // something from base
   rtc::Thread* thread = rtc::Thread::Current();
 
@@ -21,7 +40,14 @@ int main(int argc, char* argv[]) {
 
   // something from media/engine
   cricket::WebRtcVideoDeviceCapturerFactory factory;
-  cricket::VideoCapturer* capturer = factory.Create(cricket::Device("", 0));
+  auto capturer = factory.Create(cricket::Device("", 0));
+  // cricket::VideoCapturer* capturer = factory.Create(cricket::Device("", 0));
+
+    {
+        nlohmann::json j;
+        // std::cout << j.at("data") << '\n';
+        j["data"] = "z";
+    }
 
   return 0;
 }

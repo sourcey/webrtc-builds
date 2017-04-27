@@ -287,95 +287,74 @@ function compile-ninja() {
 #
 # $1: The platform
 # $2: The list of object file paths to be combined
-# $3: The blacklist objects to exclude from the library
-# $4: The output library name
+# $3: The output library name
 function combine() {
   local platform="$1"
   local outputdir="$2"
+  local libname="libwebrtc_full"
 
-  # Blacklist objects from:
-  # video_capture_external and device_info_external so that the internal video
-  # capture module implementations get linked.
-  # unittest_main because it has a main function defined.
-  local blacklist="unittest|examples|tools|yasm/|protobuf_lite|main.o|video_capture_external.o|device_info_external.o"
-  [ ! -z $3 ] && blacklist="$blacklist|$3"
+  # if [ $platform = 'win' ]; then
+  #   local extname='obj'
+  # else
+  #   local extname='o'
+  # fi
 
-  # local blacklist="unittest_main.obj|video_capture_external.obj|\
-  # device_info_external.obj"
   pushd $outputdir >/dev/null
+    rm -f $libname.*
 
-  # local extras=$(find \
-  #   obj/third_party/libvpx/libvpx_* -name "*\.o")
-  # echo "$extras" | tr ' ' '\n' >>libwebrtc_full1.list
-  #
-  # cat libwebrtc_full1.list | grep -v -E $blacklist | xargs ar -cru libwebrtc_full1.a # ar -crs $libname.a
-  # # cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
-  # # local extras=$(find \
-  # #   obj/third_party/libvpx/libvpx_* -name "*\.o")
-  #   # echo "$extras"
-  #   exit
+    # Prevent blacklisted objects such as ones containing a main function from
+    # being combined.
+    # Blacklist objects from video_capture_external and device_info_external so
+    # that the internal video capture module implementations get linked.
+    # unittest_main because it has a main function defined.
+    # local blacklist="unittest|examples|tools|yasm/|protobuf_lite|main.o|video_capture_external.o|device_info_external.o"
 
-    rm -f libwebrtc_full.*
+    # Method 1: Collect all .o files from .ninja_deps and some missing intrinsics
+    # local objlist=$(strings .ninja_deps | grep -o ".*\.o")
+    # local extras=$(find \
+    #   obj/third_party/libvpx/libvpx_* \
+    #   obj/third_party/libjpeg_turbo/simd_asm \
+    #   obj/third_party/boringssl/boringssl_asm -name "*\.o")
+    # echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >$libname.list
+    # echo "$extras" | tr ' ' '\n' | grep -v -E $blacklist >>$libname.list
 
-    # Method 1: Collect all .o* files from .ninja_deps and some missing intrinsics
-
-    # if [ $platform = 'win' ]; then
-    #   local extname='obj'
-    # else
-    #   local extname='o'
-    # fi
-
-    # Method 2: Collect all .o* files from output directory
+    # Method 2: Collect all .o files from output directory
     # local objlist=$(find . -name '*.o' | grep -v -E $blacklist)
     # echo "$objlist" >$libname.list
 
-    # Combine all objects into one static library. Prevent blacklisted objects
-    # such as ones containing a main function from being combined.
+    # Method 3: Merge only the libraries we need
+    # NOTE: This method is current preferred since combining .o objects is
+    # causing undefined references to libvpx intrinsics on Linux.
+    if [ $platform = 'win' ]; then
+      local whitelist="boringssl.dll.lib|protobuf_lite.dll.lib|webrtc\.lib|field_trial_default.lib|metrics_default.lib"
+    else
+      local whitelist="boringssl\.a|protobuf_full\.a|webrtc\.a|field_trial_default\.a|metrics_default\.a"
+    fi
+    cat .ninja_log | tr '\t' '\n' | grep -E $whitelist | sort -u >$libname.list
+
+    # Combine all objects into one static library
     case $platform in
     win)
-
-      # Method 3: Merge only the libraries we need
-      if [ $platform = 'win' ]; then
-        local whitelist="boringssl.dll.lib|protobuf_lite.dll.lib|webrtc\.lib|field_trial_default.lib|metrics_default.lib"
-      # else
-        # local whitelist="boringssl\.a|protobuf_full\.a|webrtc\.a|field_trial_default.a|metrics_default.a"
-      fi
-      cat .ninja_log | tr '\t' '\n' | grep -E $whitelist | sort -u >libwebrtc_full.list
-
       # TODO: Support VS 2017
-      "$VS140COMNTOOLS../../VC/bin/lib" /OUT:libwebrtc_full.lib @libwebrtc_full.list
+      "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
       ;;
     *)
-#       ar -M <<EOM
-#         CREATE libwebrtc_full.a
-#         ADDLIB obj/third_party/boringssl/libboringssl.a
-#         ADDLIB obj/third_party/protobuf/libprotobuf_full.a
-#         ADDLIB obj/webrtc/system_wrappers/libfield_trial_default.a
-#         ADDLIB obj/webrtc/system_wrappers/libmetrics_default.a
-#         ADDLIB obj/webrtc/libwebrtc.a
-#         SAVE
-#         END
-# EOM
-#       ranlib libwebrtc_full.a
+      # Combine *.a static libraries
+      echo "CREATE $libname.a" >$libname.ar
+      while read a; do
+        echo "ADDLIB $a" >>$libname.ar
+      done <$libname.list
+      echo "SAVE" >>$libname.ar
+      echo "END" >>$libname.ar
+      ar -M < $libname.ar
 
-      # local objlist=$(strings .ninja_deps | grep -o ".*\.o")
-      # local extras=$(find \
-      #   obj/third_party/libvpx/libvpx_* \
-      #   obj/third_party/libjpeg_turbo/simd_asm \
-      #   obj/third_party/boringssl/boringssl_asm -name "*\.o")ll
-      # echo "$objlist" | tr ' ' '\n' | grep -v -E $blacklist >libwebrtc_full.list
-      # echo "$extras" | tr ' ' '\n' >>libwebrtc_full.list
-      #
-      # cat libwebrtc_full.list | grep -v -E $blacklist | xargs ar -rcs libwebrtc_full.a # ar -crs $libname.a
-      # # cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
-      # exit
+      # Combine *.o objects using ar
+      # cat $libname.list | xargs ar -crs $libname.a
 
+      # Combine *.o objects into a thin library using ar
+      # cat $libname.list | xargs ar -ccT $libname.a
 
-      # Method 2: Collect all .o* files from output directory
-      local objlist=$(find obj -name '*.o') #$(find . -name '*.o' | grep -v -E $blacklist)
-      echo "$objlist" >libwebrtc_full.list
-      cat libwebrtc_full.list | xargs ar -rcT libwebrtc_full.a
-      exit
+      ranlib $libname.a
       ;;
     esac
   popd >/dev/null
@@ -390,24 +369,30 @@ function compile() {
   local target_os="$3"
   local target_cpu="$4"
   local blacklist="$5"
+  #local blacklist="$5"
 
-  # local common_args="" FIXME
-  # local target_args=""
   # A note on default common args:
   # `rtc_include_tests=false`: Disable all unit tests
-  # `is_component_build=true`: Build with dynamic CRT
+  # `is_component_build=true`: Build with dynamic CRT when true
+  local common_args="rtc_include_tests=false " # is_component_build=true
+  local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
+  [ $ENABLE_RTTI = 1 ] && common_args+=" use_rtti=true"
+
   # `enable_iterator_debugging=false`: Disable libstdc++ debugging facilities
   # unless all your compiled applications and dependencies define _GLIBCXX_DEBUG=1.
-  local common_args="rtc_include_tests=false use_rtti=true" # is_component_build=true
-  local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
-  [ $ENABLE_RTTI = 1 ] && target_args+=" use_rtti=true"
+  # This will cause errors like: undefined reference to `non-virtual thunk to
+  # cricket::VideoCapturer::AddOrUpdateSink(rtc::VideoSinkInterface<webrtc::VideoFrame>*,
+  # rtc::VideoSinkWants const&)'
+  [ $ENABLE_ITERATOR_DEBUGGING = 0 ] && common_args+=" enable_iterator_debugging=false"
 
   # Comment this out to use clang.
   # `is_clang=false` and `sysroot=false` to build using gcc.
   # NOTE: This was creating corrupted binaries with
   # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
-  target_args+=" is_clang=false"
-  [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
+  if [ $ENABLE_CLANG = 0 ]; then
+    target_args+=" is_clang=false"
+    [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
+  fi
 
   pushd $outdir/src >/dev/null
     compile-ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"

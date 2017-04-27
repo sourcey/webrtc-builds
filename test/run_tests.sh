@@ -18,8 +18,9 @@ pushd $tmpdir >/dev/null
   for CONFIG in $CONFIGS; do
     if [[ $(uname) = Linux ]]; then
       export PKG_CONFIG_PATH=$WEBRTCBUILDS_FOLDER/lib/$TARGET_CPU/$CONFIG/pkgconfig
-      echo "c++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread"
-      c++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
+      # c++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
+      # ../out/src/third_party/llvm-build/Release+Asserts/bin/clang++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
+      # ./clang -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
     elif [[ $(uname) = Darwin ]]; then
       clang++ -o simple_app $DIR/simple_app.cc -DWEBRTC_POSIX -DWEBRTC_MAC -I$WEBRTCBUILDS_FOLDER/include -std=c++11 -stdlib=libc++ $WEBRTCBUILDS_FOLDER/lib/$TARGET_CPU/$CONFIG/libwebrtc_full.a -framework Cocoa -framework Foundation -framework IOKit -framework Security -framework SystemConfiguration -framework ApplicationServices -framework CoreServices -framework CoreVideo -framework CoreAudio -framework AudioToolbox -framework QTKit -framework AVFoundation -framework CoreMedia
     else

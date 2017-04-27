@@ -369,12 +369,11 @@ function compile() {
   local target_os="$3"
   local target_cpu="$4"
   local blacklist="$5"
-  #local blacklist="$5"
 
   # A note on default common args:
   # `rtc_include_tests=false`: Disable all unit tests
   # `is_component_build=true`: Build with dynamic CRT when true
-  local common_args="rtc_include_tests=false " # is_component_build=true
+  local common_args="rtc_include_tests=false is_component_build=false" #
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
   [ $ENABLE_RTTI = 1 ] && common_args+=" use_rtti=true"
 
@@ -385,10 +384,14 @@ function compile() {
   # rtc::VideoSinkWants const&)'
   [ $ENABLE_ITERATOR_DEBUGGING = 0 ] && common_args+=" enable_iterator_debugging=false"
 
-  # Comment this out to use clang.
-  # `is_clang=false` and `sysroot=false` to build using gcc.
-  # NOTE: This was creating corrupted binaries with
-  # revision 92ea601e90c3fc12624ce35bb62ceaca8bc07f1b
+  # Use clang or gcc to compile WebRTC.
+  # NOTE: Due to bugs and incompatabilities with newer versions of gcc >= 4.8
+  # its recommended to compile WebRTC with clang. This may cause issues when
+  # including libraries with applications compiled with gcc, in which case
+  # ENABLE_CLANG can be set to false. Furthermore there are often gcc related
+  # bugs in the codebase since clang is the default compiler used for WebRTC
+  # tests and releases, so use gcc at your own risk.
+  # Set `is_clang=false` and `use_sysroot=false` to build using gcc.
   if [ $ENABLE_CLANG = 0 ]; then
     target_args+=" is_clang=false"
     [ $platform = 'linux' ] && target_args+=" use_sysroot=false"

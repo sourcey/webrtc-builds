@@ -6,21 +6,10 @@
 #include "webrtc/base/ssladapter.h"
 
 
-#include "json.hpp" // include nlohmann json
-
-// #include "scy/idler.h"
-// #include "scy/idler.h"
-// #include "scy/logger.h"
-using std::endl;
-// using namespace scy;
-
 int main(int argc, char* argv[]) {
 
-
-  // Setup WebRTC environment
+  // logging
   rtc::LogMessage::LogToDebug(rtc::LS_VERBOSE); // LS_VERBOSE, LS_INFO, LERROR
-  // rtc::LogMessage::LogTimestamps();
-  // rtc::LogMessage::LogThreads();
 
   rtc::InitializeSSL();
 
@@ -42,12 +31,6 @@ int main(int argc, char* argv[]) {
   cricket::WebRtcVideoDeviceCapturerFactory factory;
   auto capturer = factory.Create(cricket::Device("", 0));
   // cricket::VideoCapturer* capturer = factory.Create(cricket::Device("", 0));
-
-    {
-        nlohmann::json j;
-        // std::cout << j.at("data") << '\n';
-        j["data"] = "z";
-    }
 
   return 0;
 }

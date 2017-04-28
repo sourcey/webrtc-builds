@@ -49,8 +49,9 @@ OUTDIR=${OUTDIR:-out}
 BRANCH=${BRANCH:-}
 BLACKLIST=${BLACKLIST:-}
 ENABLE_RTTI=${ENABLE_RTTI:-1}
-ENABLE_CLANG=1
 ENABLE_ITERATOR_DEBUGGING=0
+ENABLE_CLANG=1
+ENABLE_STATIC_LIBS=1
 BUILD_ONLY=${BUILD_ONLY:-0}
 DEBUG=${DEBUG:-0}
 PROJECT_NAME=webrtc
@@ -73,7 +74,7 @@ echo "Target OS: $TARGET_OS"
 echo "Target CPU: $TARGET_CPU"
 
 echo Checking build environment dependencies
-check::build::deps $PLATFORM "$TARGET_CPU"
+check::build::env $PLATFORM "$TARGET_CPU"
 
 echo Checking depot-tools
 check::depot-tools $PLATFORM $DEPOT_TOOLS_URL $DEPOT_TOOLS_DIR

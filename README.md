@@ -1,6 +1,6 @@
 # WebRTC Automated Builds
 
-These cross platform build scripts make it a pinch to build and package WebRTC. 
+These cross platform build scripts make it a pinch to build and package WebRTC.
 Just run the scripts and sit back while the heavy lifting is done for you.
 
 ## Supported platforms
@@ -16,16 +16,16 @@ installed.
 To build the latest version of WebRTC just type:
 
 ```
+# Build latest WebRTC for current platform:
 ./build.sh
 
-# To cross compile both x64 and x86 libraries for iOS you would run:
+# To compile a specific branch with both x64 and x86 libraries you would run:
+./build.sh -c x64 -b branch-heads/59
+./build.sh -c x86 -b branch-heads/59 -x
+
+# To cross compile both x64 and x86 libraries for iOS you would run (on MacOS):
 ./build.sh -c x64 -t ios
 ./build.sh -c x86 -t ios -x
-
-# To cross compile both x64 and x86 libraries for iOS you would run:
-./build.sh -c x64 -b branch-heads/57
-./build.sh -c x86 -b branch-heads/57 -x
-
 ```
 
 Or with options:
@@ -54,6 +54,14 @@ The output packages will be saved to `{OUTDIR}/webrtcbuilds-<rev>-<sha>-<target-
 of the commit, and `<target-os>-<target-cpu>` is the OS (linux, mac, win) and CPU (x64, x86) of the target environment.
 
 On Windows `7-Zip` is used for compressing packages, which produces vastly superiour output file size. On mac and linux the output file is `tar.gz`.
+
+## Running tests
+
+Once you have compiled the libraries you can run a quick compile test to ensure build integrity:
+
+```
+./test/run_tests.sh out/webrtc-17657-02ba69d-linux-x64
+```
 
 ## Further reading
 

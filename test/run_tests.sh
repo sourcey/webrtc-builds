@@ -10,15 +10,14 @@ WEBRTCBUILDS_FOLDER=$(cd $WEBRTCBUILDS_FOLDER && pwd -P)
 CONFIGS="Debug Release"
 TARGET_CPU=x64
 
-# tmpdir=$(mktemp -d)
-# trap 'rm -rf "$tmpdir"' EXIT INT TERM HUP
-
-tmpdir=$DIR
+# tmpdir=$DIR
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT INT TERM HUP
 pushd $tmpdir >/dev/null
   for CONFIG in $CONFIGS; do
     if [[ $(uname) = Linux ]]; then
       export PKG_CONFIG_PATH=$WEBRTCBUILDS_FOLDER/lib/$TARGET_CPU/$CONFIG/pkgconfig
-      # c++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
+      c++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
       # ../out/src/third_party/llvm-build/Release+Asserts/bin/clang++ -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
       # ./clang -o simple_app $DIR/simple_app.cc $(pkg-config --cflags --libs --define-variable=WEBRTC_LOCAL=$WEBRTCBUILDS_FOLDER libwebrtc_full) -lpthread
     elif [[ $(uname) = Darwin ]]; then

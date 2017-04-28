@@ -4,6 +4,6 @@ dependencies:
     - sudo apt-get install -qq --no-install-recommends unzip pkg-config g++ libssl-dev libnss3-dev libx11-dev libexpat1-dev libasound2
 test:
   override:
-    - build.sh
+    - ./build.sh
     - cd out; tar -xvzf *.tar.gz; cd -
     - test/run_tests.sh $(ls -d -1 out/webrtc*/)

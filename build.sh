@@ -55,6 +55,7 @@ ENABLE_STATIC_LIBS=1
 BUILD_ONLY=${BUILD_ONLY:-0}
 DEBUG=${DEBUG:-0}
 PROJECT_NAME=webrtc
+COMBINE_LIBRARIES=${COMBINE_LIBRARIES:-0}
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
 DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR=$DIR/depot_tools

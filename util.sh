@@ -82,7 +82,6 @@ function init-msenv() {
   fi
 
   export DEPOT_TOOLS_WIN_TOOLCHAIN=0
-
   pushd "$vcvars_path" >/dev/null
     OLDIFS=$IFS
     IFS=$'\n'
@@ -442,8 +441,10 @@ function compile() {
     compile::ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
     compile::ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
 
-    combine::static $platform "out/$TARGET_CPU/Debug" libwebrtc_full
-    combine::static $platform "out/$TARGET_CPU/Release" libwebrtc_full
+    if [ $COMBINE_LIBRARIES = 1 ]; then
+      combine::static $platform "out/$TARGET_CPU/Debug" libwebrtc_full
+      combine::static $platform "out/$TARGET_CPU/Release" libwebrtc_full
+    fi
   popd >/dev/null
 }
 
@@ -483,20 +484,26 @@ function package() {
       # Find and copy dependencies
       # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
       find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
-        grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
+        grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libyuv|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
         grep -v /third_party | \
         xargs -I '{}' $CP --parents '{}' $outdir/$label/include
     popd >/dev/null
 
     # Find and copy libraries
-    pushd src/out/$TARGET_CPU >/dev/null
-      # find . -name *.so -o -name *.dll -o -name *.lib -o -name *.jar | \
-      #   grep -E 'webrtc_full|/webrtc\.|boringssl.dll|protobuf_lite|system_wrappers' | \
-      #   xargs -I '{}' $CP --parents '{}' $outdir/$label/lib/$TARGET_CPU
-
-      find . -maxdepth 2 \( -name *.so -o -name *.dll -o -name *webrtc_full* -o -name *.jar \) \
-        -exec $CP --parents '{}' $outdir/$label/lib/$TARGET_CPU ';'
-    popd >/dev/null
+    configs="Debug Release"
+    for cfg in $configs; do
+      pushd src/out/$TARGET_CPU/$cfg >/dev/null
+        if [ $COMBINE_LIBRARIES = 1 ]; then
+          find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
+            grep -E 'webrtc_full' | \
+            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg
+        else
+          find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
+            grep -E 'webrtc\.|boringssl|protobuf|system_wrappers' | \
+            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg
+        fi
+      popd >/dev/null
+    done
 
     # For linux, add pkgconfig files
     if [ $platform = 'linux' ]; then

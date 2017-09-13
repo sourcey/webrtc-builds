@@ -492,15 +492,16 @@ function package() {
     # Find and copy libraries
     configs="Debug Release"
     for cfg in $configs; do
+      mkdir -p $outdir/$label/lib/$TARGET_CPU/$cfg
       pushd src/out/$TARGET_CPU/$cfg >/dev/null
         if [ $COMBINE_LIBRARIES = 1 ]; then
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc_full' | \
-            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg
+            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg/
         else
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc\.|boringssl|protobuf|system_wrappers' | \
-            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg
+            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg/
         fi
       popd >/dev/null
     done

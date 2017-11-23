@@ -7,7 +7,7 @@ Just run the scripts and sit back while the hard work is done for you.
 
 ## Supported platforms
 
-* **OSX**: [Homebrew](http://brew.sh/ recommend). Build for 'mac' and 'ios'.
+* **OSX**: [Homebrew](http://brew.sh/) recommend. Build for 'mac' and 'ios'.
 * **Windows**: Visual Studio Community 2015 Update 3 or newer
 with a bash shell such as [Git for Windows](https://msysgit.github.io) or [MSYS](http://www.mingw.org/wiki/msys)
 installed.

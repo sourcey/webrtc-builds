@@ -493,7 +493,10 @@ function package() {
     # Find and copy libraries
     configs="Debug Release"
     for cfg in $configs; do
+<<<<<<< HEAD
       mkdir -p $label/lib/$TARGET_CPU/$cfg
+=======
+>>>>>>> 7b35bae0e2eb5bbd69ee9b32603bbc3fb4527baa
       pushd src/out/$TARGET_CPU/$cfg >/dev/null
         if [ $COMBINE_LIBRARIES = 1 ]; then
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \

@@ -22,8 +22,8 @@ To build the latest version of WebRTC just type:
 ./build.sh
 
 # To compile a specific branch with both x64 and x86 libraries you would run:
-./build.sh -c x64 -b branch-heads/59
-./build.sh -c x86 -b branch-heads/59 -x
+./build.sh -c x64 -b branch-heads/61
+./build.sh -c x86 -b branch-heads/61 -x
 
 # To cross compile both x64 and x86 libraries for iOS you would run (on MacOS):
 ./build.sh -c x64 -t ios

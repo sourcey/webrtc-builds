@@ -480,14 +480,8 @@ function package() {
     pushd src >/dev/null
 
       # Find and copy header files
-      find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
+      find . -name '*.h' | xargs -I '{}' $CP --parent '{}' $outdir/$label/include 
 
-      # Find and copy dependencies
-      # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
-      find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
-        grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libyuv|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
-        grep -v /third_party | \
-        xargs -I '{}' $CP --parents '{}' $outdir/$label/include
     popd >/dev/null
 
     # Find and copy libraries

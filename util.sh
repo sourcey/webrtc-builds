@@ -459,6 +459,7 @@ function package() {
   local outdir="$2"
   local label="$3"
   local resourcedir="$4"
+  local revision_number="$5"
 
   if [ $platform = 'mac' ]; then
     CP='gcp'
@@ -480,14 +481,24 @@ function package() {
     pushd src >/dev/null
 
       # Find and copy header files
-      find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
+      local headersSourceDir=webrtc
+      # Revision 19846 is the following, where upstream moved src/webrtc to src/
+      # https://webrtc.googlesource.com/src/+/92ea95e34af5966555903026f45164afbd7e2088
+      if [[ $revision_number -ge 19846 ]]; then
+      headersSourceDir=.
+      fi
+
+      # copy header files, skip third_party dir
+      find $headersSourceDir -path './third_party' -prune -o -type f \( -name '*.h' \) -print | \
+        xargs -I '{}' $CP --parents '{}' $outdir/$label/include
 
       # Find and copy dependencies
       # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
-      find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
+      find $headersSourceDir -name '*.h' -o -name README -o -name LICENSE -o -name COPYING | \
+        grep './third_party' | \
         grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libyuv|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
-        grep -v /third_party | \
         xargs -I '{}' $CP --parents '{}' $outdir/$label/include
+
     popd >/dev/null
 
     # Find and copy libraries

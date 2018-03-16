@@ -38,7 +38,7 @@ while getopts :o:b:r:t:c:l:e:xd OPTION; do
   t) TARGET_OS=$OPTARG ;;
   c) TARGET_CPU=$OPTARG ;;
   l) BLACKLIST=$OPTARG ;;
-  e) ENABLE_RTTI=OPTARG ;;
+  e) ENABLE_RTTI=1 ;;
   x) BUILD_ONLY=1 ;;
   d) DEBUG=1 ;;
   ?) usage; exit 1 ;;

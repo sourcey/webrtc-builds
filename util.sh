@@ -460,6 +460,8 @@ function package() {
   local label="$3"
   local resourcedir="$4"
 
+  CONFIGS="Debug Release"
+
   if [ $platform = 'mac' ]; then
     CP='gcp'
   else
@@ -475,7 +477,7 @@ function package() {
   pushd $outdir >/dev/null
 
     # Create directory structure
-    mkdir -p $label/include $label/lib/$TARGET_CPU packages
+    mkdir -p $label/include packages
     pushd src >/dev/null
 
       # Find and copy header files
@@ -490,9 +492,9 @@ function package() {
     popd >/dev/null
 
     # Find and copy libraries
-    configs="Debug Release"
-    for cfg in $configs; do
+    for cfg in $CONFIGS; do
       pushd src/out/$TARGET_CPU/$cfg >/dev/null
+        mkdir -p $outdir/$label/lib/$TARGET_CPU/$cfg
         if [ $COMBINE_LIBRARIES = 1 ]; then
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc_full' | \
@@ -507,8 +509,7 @@ function package() {
 
     # For linux, add pkgconfig files
     if [ $platform = 'linux' ]; then
-      configs="Debug Release"
-      for cfg in $configs; do
+      for cfg in $CONFIGS; do
         mkdir -p $label/lib/$TARGET_CPU/$cfg/pkgconfig
         CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
           $label/lib/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc

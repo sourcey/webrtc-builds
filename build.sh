@@ -38,7 +38,7 @@ while getopts :o:b:r:t:c:l:e:xd OPTION; do
   t) TARGET_OS=$OPTARG ;;
   c) TARGET_CPU=$OPTARG ;;
   l) BLACKLIST=$OPTARG ;;
-  e) ENABLE_RTTI=OPTARG ;;
+  e) ENABLE_RTTI=$OPTARG ;;
   x) BUILD_ONLY=1 ;;
   d) DEBUG=1 ;;
   ?) usage; exit 1 ;;
@@ -59,6 +59,7 @@ COMBINE_LIBRARIES=${COMBINE_LIBRARIES:-0}
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
 DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR=$DIR/depot_tools
+TOOLS_DIR=$DIR/tools
 PATH=$DEPOT_TOOLS_DIR:$DEPOT_TOOLS_DIR/python276_bin:$PATH
 
 [ "$DEBUG" = 1 ] && set -x

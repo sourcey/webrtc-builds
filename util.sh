@@ -220,7 +220,7 @@ function checkout() {
   # Remove all unstaged files that can break gclient sync
   # NOTE: need to redownload resources
   pushd src >/dev/null
-  # git reset --hard &&
+  # git reset --hard
   git clean -f
   popd >/dev/null
 
@@ -460,8 +460,6 @@ function package() {
   local label="$3"
   local resourcedir="$4"
 
-  CONFIGS="Debug Release"
-
   if [ $platform = 'mac' ]; then
     CP='gcp'
   else
@@ -472,6 +470,7 @@ function package() {
     OUTFILE=$label.7z
   else
     OUTFILE=$label.tar.gz
+    # OUTFILE=$label.tar.bz2
   fi
 
   pushd $outdir >/dev/null
@@ -481,7 +480,7 @@ function package() {
     pushd src >/dev/null
 
       # Find and copy header files
-      find webrtc -name *.h -exec $CP --parents '{}' $outdir/$label/include ';'
+      find webrtc -name '*.h' -exec $CP --parents '{}' $outdir/$label/include ';'
 
       # Find and copy dependencies
       # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
@@ -492,7 +491,9 @@ function package() {
     popd >/dev/null
 
     # Find and copy libraries
-    for cfg in $CONFIGS; do
+    configs="Debug Release"
+    for cfg in $configs; do
+      mkdir -p $label/lib/$TARGET_CPU/$cfg
       pushd src/out/$TARGET_CPU/$cfg >/dev/null
         mkdir -p $outdir/$label/lib/$TARGET_CPU/$cfg
         if [ $COMBINE_LIBRARIES = 1 ]; then
@@ -509,7 +510,7 @@ function package() {
 
     # For linux, add pkgconfig files
     if [ $platform = 'linux' ]; then
-      for cfg in $CONFIGS; do
+      for cfg in $configs; do
         mkdir -p $label/lib/$TARGET_CPU/$cfg/pkgconfig
         CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
           $label/lib/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc
@@ -520,9 +521,10 @@ function package() {
     rm -f $OUTFILE
     pushd $label >/dev/null
       if [ $platform = 'win' ]; then
-        $DEPOT_TOOLS_DIR/win_toolchain/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!linclude -r ../packages/$OUTFILE
+        $TOOLS_DIR/win/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!include -r ../packages/$OUTFILE
       else
         tar -czvf ../packages/$OUTFILE lib/$TARGET_CPU include
+        # tar cvf - lib/$TARGET_CPU include | gzip --best > ../packages/$OUTFILE
       fi
     popd >/dev/null
 
@@ -562,25 +564,25 @@ function manifest() {
 }
 EOF
 
-    # # Merge JSON manifests
-    # # node manifest.js
-    # rm -f manifest.json
-    # echo '[' > manifest.json
-    # files=(*.json)
-    # (
-    #   set -- "${files[@]}"
-    #   until (( $# == 1 )); do
-    #     if [ ! $1 = 'manifest.json' ]; then
-    #       cat $1 >> manifest.json
-    #       echo ',' >> manifest.json
-    #     fi
-    #     shift
-    #   done
-    #   cat $1 >> manifest.json
-    # )
-    # sed -i ':a;N;$!ba;s/\n//g' manifest.json
-    # sed -i 's/{/\n  {/g' manifest.json
-    # echo ']' >> manifest.json
+  # # Merge JSON manifests
+  # # node manifest.js
+  # rm -f manifest.json
+  # echo '[' > manifest.json
+  # files=(*.json)
+  # (
+  #   set -- "${files[@]}"
+  #   until (( $# == 1 )); do
+  #     if [ ! $1 = 'manifest.json' ]; then
+  #       cat $1 >> manifest.json
+  #       echo ',' >> manifest.json
+  #     fi
+  #     shift
+  #   done
+  #   cat $1 >> manifest.json
+  # )
+  # sed -i ':a;N;$!ba;s/\n//g' manifest.json
+  # sed -i 's/{/\n  {/g' manifest.json
+  # echo ']' >> manifest.json
 
   popd >/dev/null
 }

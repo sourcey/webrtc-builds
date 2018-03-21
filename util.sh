@@ -239,6 +239,7 @@ function checkout() {
 function patch() {
   local platform="$1"
   local outdir="$2"
+  local rtti_enabled="$3"
 
   pushd $outdir/src >/dev/null
     # This removes the examples from being built.
@@ -251,11 +252,11 @@ function patch() {
 
     # Enable RTTI if required by removing the 'no_rtti' compiler flag.
     # This fixes issues when compiling WebRTC with other libraries that have RTTI enabled.
-    # if [ $ENABLE_RTTI = 1 ]; then
-    #   echo "Enabling RTTI"
-    #   sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' \
-    #     build/config/BUILDCONFIG.gn
-    # fi
+    if [ "$rtti_enabled" = 1 ]; then
+      echo "Enabling RTTI"
+      sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' \
+         build/config/BUILDCONFIG.gn
+    fi
   popd >/dev/null
 }
 

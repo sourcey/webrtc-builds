@@ -7,4 +7,6 @@ Description: The WebRTC library
 Version: 0.0.1
 Requires: libcrypto, nss
 Cflags: -DWEBRTC_POSIX -I${includedir} -std=gnu++11
+# Libs: ${libdir}/x64/$CONFIG/libboringssl.a ${libdir}/x64/$CONFIG/libprotobuf_full.a ${libdir}/x64/$CONFIG/libsystem_wrappers.a ${libdir}/x64/$CONFIG/libwebrtc.a -ldl -lX11 -lexpat
 Libs: ${libdir}/x64/$CONFIG/libwebrtc_full.a -ldl -lX11 -lexpat
+

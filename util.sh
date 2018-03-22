@@ -270,7 +270,8 @@ function compile::ninja() {
   echo "Generating project files with: $gn_args"
   gn gen $outputdir --args="$gn_args"
   pushd $outputdir >/dev/null
-    ninja -C .
+    # ninja -v -C  .
+    ninja -C  .
   popd >/dev/null
 }
 
@@ -409,7 +410,7 @@ function compile() {
 
   # Set default default common  and target args.
   # `rtc_include_tests=false`: Disable all unit tests
-  local common_args="rtc_include_tests=false"
+  local common_args="rtc_include_tests=false treat_warnings_as_errors=false"
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
 
   # Build WebRTC with RTII enbled.
@@ -434,16 +435,22 @@ function compile() {
   # Set `is_clang=false` and `use_sysroot=false` to build using gcc.
   if [ $ENABLE_CLANG = 0 ]; then
     target_args+=" is_clang=false"
-    [ $platform = 'linux' ] && target_args+=" use_sysroot=false"
+    [ $platform = 'linux' ] && target_args+=" use_sysroot=false linux_use_bundled_binutils=false use_custom_libcxx=false use_custom_libcxx_for_host=false"
   fi
 
   pushd $outdir/src >/dev/null
     compile::ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
-    compile::ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false symbol_level=0 enable_nacl=false"
+    compile::ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false strip_debug_info=true symbol_level=0"
 
     if [ $COMBINE_LIBRARIES = 1 ]; then
+      # Method 2: Merge the static .a/.lib libraries.
       combine::static $platform "out/$TARGET_CPU/Debug" libwebrtc_full
       combine::static $platform "out/$TARGET_CPU/Release" libwebrtc_full
+      
+      # Method 2: Merge .o/.obj objects to create the library, although results 
+      # have been inconsistent so the static merging method is default.
+      # combine::objects $platform "out/$TARGET_CPU/Debug" libwebrtc_full
+      # combine::objects $platform "out/$TARGET_CPU/Release" libwebrtc_full
     fi
   popd >/dev/null
 }
@@ -452,82 +459,142 @@ function compile() {
 #
 # $1: The platform type.
 # $2: The output directory.
-# $3: Label of the package.
+# $3: The package filename.
 # $4: The project's resource dirctory.
-function package() {
+function package::prepare() {
   local platform="$1"
   local outdir="$2"
-  local label="$3"
-  local resourcedir="$4"
-
+  local package_filename="$3"
+  local resource_dir="$4"
+  local revision_number="$5"
+  local configs="Debug Release"
+  
   if [ $platform = 'mac' ]; then
     CP='gcp'
   else
     CP='cp'
   fi
 
-  if [ $platform = 'win' ]; then
-    OUTFILE=$label.7z
-  else
-    OUTFILE=$label.tar.gz
-    # OUTFILE=$label.tar.bz2
-  fi
-
   pushd $outdir >/dev/null
 
     # Create directory structure
-    mkdir -p $label/include packages
+    mkdir -p $package_filename/include packages
     pushd src >/dev/null
 
       # Find and copy header files
-      find webrtc -name '*.h' -exec $CP --parents '{}' $outdir/$label/include ';'
+      local header_source_dir=webrtc
+      
+      # Revision 19846 moved src/webrtc to src/
+      # https://webrtc.googlesource.com/src/+/92ea95e34af5966555903026f45164afbd7e2088
+      [ $revision_number -ge 19846 ] && header_source_dir=.
 
+      # Copy header files, skip third_party dir
+      find $header_source_dir -path './third_party' -prune -o -type f \( -name '*.h' \) -print | \
+        xargs -I '{}' $CP --parents '{}' $outdir/$package_filename/include
+        
       # Find and copy dependencies
-      # The following build dependencies were excluded: gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
-      find third_party -name *.h -o -name README -o -name LICENSE -o -name COPYING | \
+      # The following build dependencies were excluded: 
+      # gflags, ffmpeg, openh264, openmax_dl, winsdk_samples, yasm
+      find $header_source_dir -name '*.h' -o -name README -o -name LICENSE -o -name COPYING | \
+        grep './third_party' | \
         grep -E 'boringssl|expat/files|jsoncpp/source/json|libjpeg|libjpeg_turbo|libsrtp|libyuv|libvpx|opus|protobuf|usrsctp/usrsctpout/usrsctpout' | \
-        grep -v /third_party | \
-        xargs -I '{}' $CP --parents '{}' $outdir/$label/include
+        xargs -I '{}' $CP --parents '{}' $outdir/$package_filename/include
+
     popd >/dev/null
 
     # Find and copy libraries
-    configs="Debug Release"
     for cfg in $configs; do
-      mkdir -p $label/lib/$TARGET_CPU/$cfg
+      mkdir -p $package_filename/lib/$TARGET_CPU/$cfg
       pushd src/out/$TARGET_CPU/$cfg >/dev/null
-        mkdir -p $outdir/$label/lib/$TARGET_CPU/$cfg
+        mkdir -p $outdir/$package_filename/lib/$TARGET_CPU/$cfg
         if [ $COMBINE_LIBRARIES = 1 ]; then
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc_full' | \
-            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg
+            xargs -I '{}' $CP '{}' $outdir/$package_filename/lib/$TARGET_CPU/$cfg
         else
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc\.|boringssl|protobuf|system_wrappers' | \
-            xargs -I '{}' $CP '{}' $outdir/$label/lib/$TARGET_CPU/$cfg
+            xargs -I '{}' $CP '{}' $outdir/$package_filename/lib/$TARGET_CPU/$cfg
         fi
       popd >/dev/null
     done
 
-    # For linux, add pkgconfig files
+    # Create pkgconfig files on linux
     if [ $platform = 'linux' ]; then
       for cfg in $configs; do
-        mkdir -p $label/lib/$TARGET_CPU/$cfg/pkgconfig
-        CONFIG=$cfg envsubst '$CONFIG' < $resourcedir/pkgconfig/libwebrtc_full.pc.in > \
-          $label/lib/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc
+        mkdir -p $package_filename/lib/$TARGET_CPU/$cfg/pkgconfig
+        CONFIG=$cfg envsubst '$CONFIG' < $resource_dir/pkgconfig/libwebrtc_full.pc.in > \
+          $package_filename/lib/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc
       done
     fi
 
-    # Archive up the package
+  popd >/dev/null
+}
+
+# This packages a compiled build into a archive file in the output directory.
+# $1: The platform type.
+# $2: The output directory.
+# $3: The package filename.
+function package::archive() {
+  local platform="$1"
+  local outdir="$2"
+  local package_filename="$3"
+
+  if [ $platform = 'win' ]; then
+    OUTFILE=$package_filename.7z
+  else
+    OUTFILE=$package_filename.tar.gz #.tar.bz2
+  fi
+  
+  pushd $outdir >/dev/null
+  
+    # Archive the package
     rm -f $OUTFILE
-    pushd $label >/dev/null
+    pushd $package_filename >/dev/null
       if [ $platform = 'win' ]; then
         $TOOLS_DIR/win/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!include -r ../packages/$OUTFILE
       else
         tar -czvf ../packages/$OUTFILE lib/$TARGET_CPU include
         # tar cvf - lib/$TARGET_CPU include | gzip --best > ../packages/$OUTFILE
+        # zip -r $package_filename.zip $package_filename >/dev/null
       fi
     popd >/dev/null
+  
+  popd >/dev/null
+}
 
+# This packages into a debian package in the output directory.
+# $1: The output directory.
+# $2: The package filename.
+# $3: The package name.
+# $4: The package version.
+# $5: The architecture.
+function package::debian() {
+  local outdir="$1"
+  local package_filename="$2"
+  local package_name="$3"
+  local package_version="$4"
+  local arch="$5"
+  local debianize="debianize/$package_filename"
+
+  echo "Debianize WebRTC"
+  pushd $outdir >/dev/null
+  mkdir -p $debianize/DEBIAN
+  mkdir -p $debianize/opt
+  mv $package_filename $debianize/opt/webrtc
+  cat << EOF > $debianize/DEBIAN/control
+Package: $package_name
+Architecture: $arch
+Maintainer: Sourcey
+Depends: debconf (>= 0.5.00)
+Priority: optional
+Version: $package_version
+Description: webrtc static library
+ This package provides webrtc library generated with webrtcbuilds
+EOF
+  fakeroot dpkg-deb --build $debianize
+  mv debianize/*.deb .
+  rm -rf debianize
   popd >/dev/null
 }
 
@@ -535,23 +602,23 @@ function package() {
 #
 # $1: The platform type.
 # $2: The output directory.
-# $3: Label of the package.
-function manifest() {
+# $3: The package filename.
+function package::manifest() {
   local platform="$1"
   local outdir="$2"
-  local label="$3"
+  local package_filename="$3"
 
   if [ $platform = 'win' ]; then
-    OUTFILE=$label.7z
+    OUTFILE=$package_filename.7z
   else
-    OUTFILE=$label.tar.gz
+    OUTFILE=$package_filename.tar.gz
   fi
 
   mkdir -p $outdir/packages
   pushd $outdir/packages >/dev/null
     # Create a JSON manifest
-    rm -f $label.json
-    cat << EOF > $label.json
+    rm -f $package_filename.json
+    cat << EOF > $package_filename.json
 {
   "file": "$OUTFILE",
   "date": "$(current-rev-date)",
@@ -585,6 +652,39 @@ EOF
   # echo ']' >> manifest.json
 
   popd >/dev/null
+}
+
+# This interprets a pattern and returns the interpreted one.
+# $1: The pattern.
+# $2: The output directory.
+# $3: The platform type.
+# $4: The target os for cross-compilation.
+# $5: The target cpu for cross-compilation.
+# $6: The branch.
+# $7: The revision.
+# $8: The revision number.
+function interpret-pattern() {
+  local pattern="$1"
+  local platform="$2"
+  local outdir="$3"
+  local target_os="$4"
+  local target_cpu="$5"
+  local branch="$6"
+  local revision="$7"
+  local revision_number="$8"
+  local debian_arch="$(debian-arch $target_cpu)"
+  local short_revision="$(short-rev $revision)"
+
+  pattern=${pattern//%p%/$platform}
+  pattern=${pattern//%to%/$target_os}
+  pattern=${pattern//%tc%/$target_cpu}
+  pattern=${pattern//%b%/$branch}
+  pattern=${pattern//%r%/$revision}
+  pattern=${pattern//%rn%/$revision_number}
+  pattern=${pattern//%da%/$debian_arch}
+  pattern=${pattern//%sr%/$short_revision}
+
+  echo "$pattern"
 }
 
 # Return the latest revision date from the current git repo.
@@ -628,4 +728,16 @@ function revision-number() {
 function short-rev() {
   local revision="$1"
   echo $revision | cut -c -7
+}
+
+# This returns a short revision sha.
+# $1: The target cpu for cross-compilation.
+function debian-arch() {
+  local target_cpu="$1"
+  # set PLATFORM to android on linux host to build android
+  case "$target_cpu" in
+  x86*)         echo "i386" ;;
+  x64*)         echo "amd64" ;;
+  *)            echo "$target_cpu" ;;
+  esac
 }

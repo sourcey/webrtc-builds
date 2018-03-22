@@ -1,9 +1,8 @@
 # WebRTC Automated Builds
 
-[![CircleCI](https://circleci.com/gh/sourcey/webrtcbuilds.svg?style=svg)](https://circleci.com/gh/sourcey/webrtcbuilds)
+[![CircleCI](https://circleci.com/gh/sourcey/webrtc-builds.svg?style=svg)](https://circleci.com/gh/sourcey/webrtc-builds)
 
-These cross platform build scripts make it a pinch to build and package WebRTC.
-Just run the scripts and sit back while the hard work is done for you.
+These cross platform build scripts automate the hard work of building and packaging WebRTC. Big thanks to @vsimon for laying the foundation for these scripts.
 
 ## Supported platforms
 

@@ -25,12 +25,13 @@ OPTIONS:
    -l BLACKLIST   List *.o objects to exclude from the static library.
    -e ENABLE_RTTI Compile WebRTC with RTII enabled. Default is '1'.
    -x             Express build mode. Skip repo sync and dependency checks, just build, compile and package.
+   -D             [Linux] Generate a debian package
    -d             Debug mode. Print all executed commands.
    -h             Show this message
 EOF
 }
 
-while getopts :o:b:r:t:c:l:e:xd OPTION; do
+while getopts :o:b:r:t:c:l:e:xDd OPTION; do
   case $OPTION in
   o) OUTDIR=$OPTARG ;;
   b) BRANCH=$OPTARG ;;
@@ -40,6 +41,7 @@ while getopts :o:b:r:t:c:l:e:xd OPTION; do
   l) BLACKLIST=$OPTARG ;;
   e) ENABLE_RTTI=$OPTARG ;;
   x) BUILD_ONLY=1 ;;
+  D) PACKAGE_AS_DEBIAN=1 ;;
   d) DEBUG=1 ;;
   ?) usage; exit 1 ;;
   esac
@@ -50,12 +52,15 @@ BRANCH=${BRANCH:-}
 BLACKLIST=${BLACKLIST:-}
 ENABLE_RTTI=${ENABLE_RTTI:-1}
 ENABLE_ITERATOR_DEBUGGING=0
-ENABLE_CLANG=1
+ENABLE_CLANG=0
 ENABLE_STATIC_LIBS=1
 BUILD_ONLY=${BUILD_ONLY:-0}
 DEBUG=${DEBUG:-0}
-PROJECT_NAME=webrtc
-COMBINE_LIBRARIES=${COMBINE_LIBRARIES:-0}
+COMBINE_LIBRARIES=${COMBINE_LIBRARIES:-1}
+PACKAGE_AS_DEBIAN=${PACKAGE_AS_DEBIAN:-0}
+PACKAGE_FILENAME_PATTERN=${PACKAGE_FILENAME_PATTERN:-"webrtc-%rn%-%sr%-%to%-%tc%"}
+PACKAGE_NAME_PATTERN=${PACKAGE_NAME_PATTERN:-"webrtc"}
+PACKAGE_VERSION_PATTERN=${PACKAGE_VERSION_PATTERN:-"%rn%"}
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
 DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 DEPOT_TOOLS_DIR=$DIR/depot_tools
@@ -108,10 +113,18 @@ fi
 echo Compiling WebRTC
 compile $PLATFORM $OUTDIR "$TARGET_OS" "$TARGET_CPU" "$BLACKLIST"
 
-# label is <projectname>-<rev-number>-<short-rev-sha>-<target-os>-<target-cpu>
-LABEL=$PROJECT_NAME-$REVISION_NUMBER-$(short-rev $REVISION)-$TARGET_OS-$TARGET_CPU
-echo "Packaging WebRTC: $LABEL"
-package $PLATFORM $OUTDIR $LABEL $DIR/resource
-manifest $PLATFORM $OUTDIR $LABEL
+# Default PACKAGE_FILENAME is <projectname>-<rev-number>-<short-rev-sha>-<target-os>-<target-cpu>
+PACKAGE_FILENAME=$(interpret-pattern "$PACKAGE_FILENAME_PATTERN" "$PLATFORM" "$OUTDIR" "$TARGET_OS" "$TARGET_CPU" "$BRANCH" "$REVISION" "$REVISION_NUMBER")
+PACKAGE_NAME=$(interpret-pattern "$PACKAGE_NAME_PATTERN" "$PLATFORM" "$OUTDIR" "$TARGET_OS" "$TARGET_CPU" "$BRANCH" "$REVISION" "$REVISION_NUMBER")
+PACKAGE_VERSION=$(interpret-pattern "$PACKAGE_VERSION_PATTERN" "$PLATFORM" "$OUTDIR" "$TARGET_OS" "$TARGET_CPU" "$BRANCH" "$REVISION" "$REVISION_NUMBER")
+
+echo "Packaging WebRTC: $PACKAGE_FILENAME"
+package::prepare $PLATFORM $OUTDIR $PACKAGE_FILENAME $DIR/resource $REVISION_NUMBER
+if [ "$PACKAGE_AS_DEBIAN" = 1 ]; then
+  package::debian $OUTDIR $PACKAGE_FILENAME $PACKAGE_NAME $PACKAGE_VERSION "$(debian-arch $TARGET_CPU)"
+else
+  package::archive $PLATFORM $OUTDIR $PACKAGE_FILENAME
+  package::manifest $PLATFORM $OUTDIR $PACKAGE_FILENAME
+fi
 
 echo Build successful

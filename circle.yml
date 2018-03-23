@@ -5,8 +5,7 @@ dependencies:
     - sudo apt-get install -qq --no-install-recommends unzip pkg-config libssl-dev libnss3-dev libx11-dev libexpat1-dev libasound2
     - sudo apt-get install --yes gcc-5 g++-5
     - sudo apt-get install --yes binutils-2.26
-    - sudo update-alternatives --install
-    - /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90;
+    - sudo update-alternatives --install /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90
 test:
   override:
     - ./build.sh

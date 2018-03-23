@@ -8,6 +8,6 @@ dependencies:
     - sudo update-alternatives --install /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90
 test:
   override:
-    - ./build.sh
+    - ./build.sh -n Release
     - cd out; tar -xvzf *.tar.gz; cd -
     - test/run_tests.sh $(ls -d -1 out/webrtc*/)

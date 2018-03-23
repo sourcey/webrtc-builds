@@ -406,10 +406,12 @@ function compile() {
   local outdir="$2"
   local target_os="$3"
   local target_cpu="$4"
+  local configs="$5"
   local blacklist="$5"
 
   # Set default default common  and target args.
   # `rtc_include_tests=false`: Disable all unit tests
+  # `treat_warnings_as_errors=false`: Don't error out on compiler warnings
   local common_args="rtc_include_tests=false treat_warnings_as_errors=false"
   local target_args="target_os=\"$target_os\" target_cpu=\"$target_cpu\""
 
@@ -434,24 +436,24 @@ function compile() {
   # like the clang compiled libraries, so the option is there.
   # Set `is_clang=false` and `use_sysroot=false` to build using gcc.
   if [ $ENABLE_CLANG = 0 ]; then
-    target_args+=" is_clang=false"
-    [ $platform = 'linux' ] && target_args+=" use_sysroot=false linux_use_bundled_binutils=false use_custom_libcxx=false use_custom_libcxx_for_host=false"
+    common_args+=" is_clang=false"
+    [ $platform = 'linux' ] && common_args+=" use_sysroot=false linux_use_bundled_binutils=false use_custom_libcxx=false use_custom_libcxx_for_host=false"
   fi
 
   pushd $outdir/src >/dev/null
-    compile::ninja "out/$TARGET_CPU/Debug" "$common_args $target_args is_debug=true"
-    compile::ninja "out/$TARGET_CPU/Release" "$common_args $target_args is_debug=false strip_debug_info=true symbol_level=0"
+    for cfg in $configs; do
+      [ "$cfg" = 'Release' ] && common_args+=' is_debug=false strip_debug_info=true symbol_level=0'
+      compile::ninja "out/$target_cpu/$cfg" "$common_args $target_args"
 
-    if [ $COMBINE_LIBRARIES = 1 ]; then
-      # Method 2: Merge the static .a/.lib libraries.
-      combine::static $platform "out/$TARGET_CPU/Debug" libwebrtc_full
-      combine::static $platform "out/$TARGET_CPU/Release" libwebrtc_full
-      
-      # Method 2: Merge .o/.obj objects to create the library, although results 
-      # have been inconsistent so the static merging method is default.
-      # combine::objects $platform "out/$TARGET_CPU/Debug" libwebrtc_full
-      # combine::objects $platform "out/$TARGET_CPU/Release" libwebrtc_full
-    fi
+      if [ $COMBINE_LIBRARIES = 1 ]; then
+        # Method 1: Merge the static .a/.lib libraries.
+        combine::static $platform "out/$target_cpu/$cfg" libwebrtc_full
+        
+        # Method 2: Merge .o/.obj objects to create the library, although results 
+        # have been inconsistent so the static merging method is default.
+        # combine::objects $platform "out/$target_cpu/$cfg" libwebrtc_full
+      fi 
+    done
   popd >/dev/null
 }
 
@@ -461,13 +463,15 @@ function compile() {
 # $2: The output directory.
 # $3: The package filename.
 # $4: The project's resource dirctory.
+# $5: The build configurations.
+# $6: The revision number.
 function package::prepare() {
   local platform="$1"
   local outdir="$2"
   local package_filename="$3"
   local resource_dir="$4"
-  local revision_number="$5"
-  local configs="Debug Release"
+  local configs="$5"
+  local revision_number="$6"
   
   if [ $platform = 'mac' ]; then
     CP='gcp'

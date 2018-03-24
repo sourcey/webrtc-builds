@@ -11,6 +11,8 @@ CONFIGS=${2:-Debug Release}
 
 # This is for handling breaking changes between WebRTC versions in our test
 WEBRTC_REVISION_NUMBER=$(echo $WEBRTCBUILDS_FOLDER | cut -d- -f2)
+echo $WEBRTCBUILDS_FOLDER
+echo echo $WEBRTCBUILDS_FOLDER | cut -d- -f2
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT INT TERM HUP

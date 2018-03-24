@@ -6,8 +6,11 @@ dependencies:
     - sudo apt-get install --yes gcc-5 g++-5
     - sudo apt-get install --yes binutils-2.26
     - sudo update-alternatives --install /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90
+    # Use prebuilt WebRTC while CI builds are disabled
+    - mkdir -p out/webrtc-22215-ab42706-linux-x64; curl -sSL https://github.com/sourcey/webrtc-precompiled-builds/raw/master/webrtc-22215-ab42706-linux-x64.tar.gz | sudo tar -xzC out/webrtc-22215-ab42706-linux-x64
 test:
   override:
-    - ./build.sh -n Release
+    # Disable builds since it exceeds the 4GB memory limit
+    # - ./build.sh -n Release
     - cd out; tar -xvzf *.tar.gz; cd -
     - test/run_tests.sh $(ls -d -1 out/webrtc*/)

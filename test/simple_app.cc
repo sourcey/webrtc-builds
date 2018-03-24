@@ -1,6 +1,6 @@
 // Revision 19846 is the following, where upstream moved src/webrtc to src/
 // https://webrtc.googlesource.com/src/+/92ea95e34af5966555903026f45164afbd7e2088
-#if defined(WEBRTC_REVISION_NUMBER) && WEBRTC_REVISION_NUMBER < 19846
+#if WEBRTC_REVISION_NUMBER && WEBRTC_REVISION_NUMBER < 19846
   #include "webrtc/rtc_base/thread.h"
   #include "webrtc/p2p/base/basicpacketsocketfactory.h"
   #include "webrtc/api/peerconnectioninterface.h"

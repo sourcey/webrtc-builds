@@ -12,5 +12,5 @@ test:
   override:
     # Disable builds since it exceeds the 4GB memory limit
     # - ./build.sh -n Release
-    - cd out; tar -xvzf *.tar.gz; cd -
+    # - cd out; tar -xvzf *.tar.gz; cd -
     - test/run_tests.sh $(ls -d -1 out/webrtc*/)

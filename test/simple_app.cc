@@ -1,24 +1,24 @@
 // Revision 19846 is the following, where upstream moved src/webrtc to src/
 // https://webrtc.googlesource.com/src/+/92ea95e34af5966555903026f45164afbd7e2088
-#if WEBRTC_REVISION_NUMBER && WEBRTC_REVISION_NUMBER < 19846
-  #include "webrtc/rtc_base/thread.h"
-  #include "webrtc/p2p/base/basicpacketsocketfactory.h"
-  #include "webrtc/api/peerconnectioninterface.h"
-  #include "webrtc/api/test/fakeconstraints.h"
-  #include "webrtc/media/engine/webrtcvideocapturerfactory.h"
-  #include "webrtc/base/ssladapter.h"
-  #include "webrtc/api/audio_codecs/builtin_audio_decoder_factory.h"
-  #include "webrtc/api/audio_codecs/builtin_audio_encoder_factory.h"
-#else
-  #include "rtc_base/thread.h"
-  #include "p2p/base/basicpacketsocketfactory.h"
-  #include "api/peerconnectioninterface.h"
-  #include "api/test/fakeconstraints.h"
-  #include "media/engine/webrtcvideocapturerfactory.h"
-  #include "rtc_base/ssladapter.h"
-  #include "api/audio_codecs/builtin_audio_decoder_factory.h"
-  #include "api/audio_codecs/builtin_audio_encoder_factory.h"
-#endif
+// #if WEBRTC_REVISION_NUMBER && WEBRTC_REVISION_NUMBER < 19846
+//   #include "webrtc/rtc_base/thread.h"
+//   #include "webrtc/p2p/base/basicpacketsocketfactory.h"
+//   #include "webrtc/api/peerconnectioninterface.h"
+//   #include "webrtc/api/test/fakeconstraints.h"
+//   #include "webrtc/media/engine/webrtcvideocapturerfactory.h"
+//   #include "webrtc/base/ssladapter.h"
+//   #include "webrtc/api/audio_codecs/builtin_audio_decoder_factory.h"
+//   #include "webrtc/api/audio_codecs/builtin_audio_encoder_factory.h"
+// #else
+#include "rtc_base/thread.h"
+#include "p2p/base/basicpacketsocketfactory.h"
+#include "api/peerconnectioninterface.h"
+#include "api/test/fakeconstraints.h"
+#include "media/engine/webrtcvideocapturerfactory.h"
+#include "rtc_base/ssladapter.h"
+#include "api/audio_codecs/builtin_audio_decoder_factory.h"
+#include "api/audio_codecs/builtin_audio_encoder_factory.h"
+// #endif
 
 
 class VideoPacketSource : public cricket::VideoCapturer

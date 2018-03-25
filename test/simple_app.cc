@@ -53,13 +53,13 @@ int main(int argc, char* argv[]) {
     new rtc::BasicPacketSocketFactory());
 
   // something from api
-  rtc::scoped_refptr<webrtc::AudioEncoderFactory> audio_encoder_factory = webrtc::CreateBuiltinAudioEncoderFactory();
-  rtc::scoped_refptr<webrtc::AudioDecoderFactory> audio_decoder_factory = webrtc::CreateBuiltinAudioDecoderFactory();
-  rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>
-    peer_connection_factory = webrtc::CreatePeerConnectionFactory(audio_encoder_factory, audio_decoder_factory);
+  // rtc::scoped_refptr<webrtc::AudioEncoderFactory> audio_encoder_factory = webrtc::CreateBuiltinAudioEncoderFactory();
+  // rtc::scoped_refptr<webrtc::AudioDecoderFactory> audio_decoder_factory = webrtc::CreateBuiltinAudioDecoderFactory();
+  // rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>
+  //   peer_connection_factory = webrtc::CreatePeerConnectionFactory(audio_encoder_factory, audio_decoder_factory);
 
   // custom video source
-  //VideoPacketSource video_source;
+  // VideoPacketSource video_source;
 
   // something from api/test
   webrtc::FakeConstraints constraints;

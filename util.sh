@@ -256,6 +256,24 @@ function patch() {
     #   sed -i.bak 's|"//build/config/compiler:no_rtti",|#"//build/config/compiler:no_rtti",|' \
     #     build/config/BUILDCONFIG.gn
     # fi
+
+    # For iOS change bundle identifier
+    if [[ $TARGET_OS == "ios" ]]
+    then
+        ios_plists=(\
+            examples/objc/AppRTCMobile/ios/Info.plist\
+            sdk/objc/Framework/Info.plist\
+        )
+
+        echo "#### Changing bundle indentifier..."
+        for plist in ${ios_plists[@]}
+        do
+            sed -i.bak 's/com\.google\.AppRTCMobile/com\.paltalk\.paltalkvideo/g' ${plist}
+            sed -i.bak 's/org\.webrtc\.WebRTC/com\.paltalk\.paltalkvideo/g' ${plist}
+            git add ${plist}
+        done
+    fi
+    
   popd >/dev/null
 }
 
@@ -417,6 +435,9 @@ function compile() {
 
   # Build WebRTC with RTII enbled.
   [ $ENABLE_RTTI = 1 ] && common_args+=" use_rtti=true"
+
+  # Set code 
+  [ $IOS_CODE_SIGNING_IDENTITY != "" ] && common_args+=" ios_code_signing_identity=\"${IOS_CODE_SIGNING_IDENTITY}\""
 
   # Static vs Dynamic CRT: When `is_component_build` is false static CTR will be
   # enforced.By default Debug builds are dynamic and Release builds are static.

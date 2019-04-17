@@ -24,6 +24,8 @@ OPTIONS:
    -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
    -l BLACKLIST   List *.o objects to exclude from the static library.
    -e ENABLE_RTTI Compile WebRTC with RTII enabled. Default is '1'.
+   -a ENABLE_CLANG Enable clang build
+   -i CODESIGN    Set the code sign identity for iOS provisioning (IOS_CODE_SIGNING_IDENTITY)
    -n CONFIGS     Build configurations, space-separated. Default is 'Debug Release'. Other values can be 'Debug', 'Release'.
    -x             Express build mode. Skip repo sync and dependency checks, just build, compile and package.
    -D             [Linux] Generate a debian package
@@ -32,7 +34,7 @@ OPTIONS:
 EOF
 }
 
-while getopts :o:b:r:t:c:l:e:n:xDd OPTION; do
+while getopts :o:b:r:t:c:l:a:e:i:n:xDd OPTION; do
   case $OPTION in
   o) OUTDIR=$OPTARG ;;
   b) BRANCH=$OPTARG ;;
@@ -40,7 +42,9 @@ while getopts :o:b:r:t:c:l:e:n:xDd OPTION; do
   t) TARGET_OS=$OPTARG ;;
   c) TARGET_CPU=$OPTARG ;;
   l) BLACKLIST=$OPTARG ;;
+  a) ENABLE_CLANG=$OPTARG ;;
   e) ENABLE_RTTI=$OPTARG ;;
+  i) IOS_CODE_SIGNING_IDENTITY=$OPTARG ;;
   n) CONFIGS=$OPTARG ;;
   x) BUILD_ONLY=1 ;;
   D) PACKAGE_AS_DEBIAN=1 ;;
@@ -52,10 +56,11 @@ done
 OUTDIR=${OUTDIR:-out}
 BRANCH=${BRANCH:-}
 BLACKLIST=${BLACKLIST:-}
+ENABLE_CLANG=${ENABLE_CLANG:-1}
 ENABLE_RTTI=${ENABLE_RTTI:-1}
 ENABLE_ITERATOR_DEBUGGING=0
-ENABLE_CLANG=0
 ENABLE_STATIC_LIBS=1
+IOS_CODE_SIGNING_IDENTITY=${IOS_CODE_SIGNING_IDENTITY:-}
 BUILD_ONLY=${BUILD_ONLY:-0}
 DEBUG=${DEBUG:-0}
 CONFIGS=${CONFIGS:-Debug Release}
@@ -90,7 +95,7 @@ echo Checking depot-tools
 check::depot-tools $PLATFORM $DEPOT_TOOLS_URL $DEPOT_TOOLS_DIR
 
 if [ ! -z $BRANCH ]; then
-  REVISION=$(git ls-remote $REPO_URL --heads $BRANCH | head --lines 1 | cut --fields 1) || \
+  REVISION=$(git ls-remote $REPO_URL --heads $BRANCH | head -1 | awk '{print $1}') || \
     { echo "Cound not get branch revision" && exit 1; }
    echo "Building branch: $BRANCH"
 else

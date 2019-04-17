@@ -292,7 +292,7 @@ function patch() {
 
 # Compile using ninja.
 #
-# $1 The output directory, 'out/$TARGET_OS/$TARGET_CPU/Debug', or 'out/$TARGET_OS/$TARGET_CPU/Release'
+# $1 The output directory, 'out/$TARGET_CPU/Debug', or 'out/$TARGET_CPU/Release'
 # $2 Additional gn arguments
 function compile::ninja() {
   local outputdir="$1"
@@ -542,17 +542,17 @@ function package::prepare() {
 
     # Find and copy libraries
     for cfg in $configs; do
-      mkdir -p $package_filename/lib/$TARGET_OS/$TARGET_CPU/$cfg
-      pushd src/out/$TARGET_OS/$TARGET_CPU/$cfg >/dev/null
-        mkdir -p $outdir/$package_filename/lib/$TARGET_OS/$TARGET_CPU/$cfg
+      mkdir -p $package_filename/lib/$TARGET_CPU/$cfg
+      pushd src/out/$TARGET_CPU/$cfg >/dev/null
+        mkdir -p $outdir/$package_filename/lib/$TARGET_CPU/$cfg
         if [ $COMBINE_LIBRARIES = 1 ]; then
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc_full' | \
-            xargs -I '{}' $CP '{}' $outdir/$package_filename/lib/$TARGET_OS/$TARGET_CPU/$cfg
+            xargs -I '{}' $CP '{}' $outdir/$package_filename/lib/$TARGET_CPU/$cfg
         else
           find . -name '*.so' -o -name '*.dll' -o -name '*.lib' -o -name '*.a' -o -name '*.jar' | \
             grep -E 'webrtc\.|boringssl|protobuf|system_wrappers' | \
-            xargs -I '{}' $CP '{}' $outdir/$package_filename/lib/$TARGET_OS/$TARGET_CPU/$cfg
+            xargs -I '{}' $CP '{}' $outdir/$package_filename/lib/$TARGET_CPU/$cfg
         fi
       popd >/dev/null
     done
@@ -560,9 +560,9 @@ function package::prepare() {
     # Create pkgconfig files on linux
     if [ $platform = 'linux' ]; then
       for cfg in $configs; do
-        mkdir -p $package_filename/lib/$TARGET_OS/$TARGET_CPU/$cfg/pkgconfig
+        mkdir -p $package_filename/lib/$TARGET_CPU/$cfg/pkgconfig
         CONFIG=$cfg envsubst '$CONFIG' < $resource_dir/pkgconfig/libwebrtc_full.pc.in > \
-          $package_filename/lib/$TARGET_OS/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc
+          $package_filename/lib/$TARGET_CPU/$cfg/pkgconfig/libwebrtc_full.pc
       done
     fi
 
@@ -590,10 +590,10 @@ function package::archive() {
     rm -f $OUTFILE
     pushd $package_filename >/dev/null
       if [ $platform = 'win' ]; then
-        $TOOLS_DIR/win/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_OS/$TARGET_CPU -ir!include -r ../packages/$OUTFILE
+        $TOOLS_DIR/win/7z/7z.exe a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on -ir!lib/$TARGET_CPU -ir!include -r ../packages/$OUTFILE
       else
-        tar -czvf ../packages/$OUTFILE lib/$TARGET_OS/$TARGET_CPU include
-        # tar cvf - lib/$TARGET_OS/$TARGET_CPU include | gzip --best > ../packages/$OUTFILE
+        tar -czvf ../packages/$OUTFILE lib/$TARGET_CPU include
+        # tar cvf - lib/$TARGET_CPU include | gzip --best > ../packages/$OUTFILE
         # zip -r $package_filename.zip $package_filename >/dev/null
       fi
     popd >/dev/null

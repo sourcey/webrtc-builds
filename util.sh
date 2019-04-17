@@ -257,6 +257,16 @@ function patch() {
     #     build/config/BUILDCONFIG.gn
     # fi
 
+    # Delete line which asserts that cannot run on OSX
+    if [[ $TARGET_OS == "osx" ]] || [[ $TARGET_OS == "ios" ]] || [[ $platfTARGET_OSorm == "iossim" ]]
+    then
+        echo "#### Applying patches for OSX..."
+        sed -i.bak -e '98d' build/config/mac/mac_sdk.gni
+        pushd build/config/mac
+        git add mac_sdk.gni
+        popd
+    fi
+
     # For iOS change bundle identifier
     if [[ $TARGET_OS == "ios" ]]
     then
@@ -273,7 +283,10 @@ function patch() {
             git add ${plist}
         done
     fi
-    
+
+    sed -i.bak 's/      "examples",//' BUILD.gn
+    git add BUILD.gn
+
   popd >/dev/null
 }
 

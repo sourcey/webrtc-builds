@@ -474,6 +474,12 @@ function compile() {
     [ $platform = 'linux' ] && common_args+=" use_sysroot=false linux_use_bundled_binutils=false use_custom_libcxx=false use_custom_libcxx_for_host=false"
   fi
 
+    if [[ ! -d ${outdir}/src ]]
+    then
+        echo "ERROR: Need to run without `-x` first to checkout the source for this build. Then try again..."
+        exit -1
+    fi
+
   pushd $outdir/src >/dev/null
     for cfg in $configs; do
       [ "$cfg" = 'Release' ] && common_args+=' is_debug=false strip_debug_info=true symbol_level=0'

@@ -17,7 +17,7 @@ Usage:
 WebRTC automated build script.
 
 OPTIONS:
-   -o OUTDIR      Output directory. Default is 'out'
+   -o OUTDIR      Output directory. Default is 'out/<TARGET_OS>'
    -b BRANCH      Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'nn' is the release number.
    -r REVISION    Git SHA revision. Default is latest revision.
    -t TARGET OS   The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
@@ -53,7 +53,6 @@ while getopts :o:b:r:t:c:l:a:e:i:n:xDd OPTION; do
   esac
 done
 
-OUTDIR=${OUTDIR:-out}
 BRANCH=${BRANCH:-}
 BLACKLIST=${BLACKLIST:-}
 ENABLE_CLANG=${ENABLE_CLANG:-1}
@@ -77,13 +76,15 @@ PATH=$DEPOT_TOOLS_DIR:$DEPOT_TOOLS_DIR/python276_bin:$PATH
 
 [ "$DEBUG" = 1 ] && set -x
 
-mkdir -p $OUTDIR
-OUTDIR=$(cd $OUTDIR && pwd -P)
-
 detect-platform
 TARGET_OS=${TARGET_OS:-$PLATFORM}
 TARGET_CPU=${TARGET_CPU:-x64}
+OUTDIR=${OUTDIR:-out/$TARGET_OS}
 
+mkdir -p $OUTDIR
+OUTDIR=$(cd $OUTDIR && pwd -P)
+
+echo "Output Directory: $OUTDIR"
 echo "Host OS: $PLATFORM"
 echo "Target OS: $TARGET_OS"
 echo "Target CPU: $TARGET_CPU"

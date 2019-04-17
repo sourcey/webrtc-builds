@@ -35,22 +35,22 @@ EOF
 }
 
 while getopts :o:b:r:t:c:l:a:e:i:n:xDd OPTION; do
-  case $OPTION in
-  o) OUTDIR=$OPTARG ;;
-  b) BRANCH=$OPTARG ;;
-  r) REVISION=$OPTARG ;;
-  t) TARGET_OS=$OPTARG ;;
-  c) TARGET_CPU=$OPTARG ;;
-  l) BLACKLIST=$OPTARG ;;
-  a) ENABLE_CLANG=$OPTARG ;;
-  e) ENABLE_RTTI=$OPTARG ;;
-  i) IOS_CODE_SIGNING_IDENTITY=$OPTARG ;;
-  n) CONFIGS=$OPTARG ;;
-  x) BUILD_ONLY=1 ;;
-  D) PACKAGE_AS_DEBIAN=1 ;;
-  d) DEBUG=1 ;;
-  ?) usage; exit 1 ;;
-  esac
+    case $OPTION in
+    o) OUTDIR=$OPTARG ;;
+    b) BRANCH=$OPTARG ;;
+    r) REVISION=$OPTARG ;;
+    t) TARGET_OS=$OPTARG ;;
+    c) TARGET_CPU=$OPTARG ;;
+    l) BLACKLIST=$OPTARG ;;
+    a) ENABLE_CLANG=$OPTARG ;;
+    e) ENABLE_RTTI=$OPTARG ;;
+    i) IOS_CODE_SIGNING_IDENTITY=$OPTARG ;;
+    n) CONFIGS=$OPTARG ;;
+    x) BUILD_ONLY=1 ;;
+    D) PACKAGE_AS_DEBIAN=1 ;;
+    d) DEBUG=1 ;;
+    ?) usage; exit 1 ;;
+    esac
 done
 
 BRANCH=${BRANCH:-}
@@ -96,27 +96,27 @@ echo Checking depot-tools
 check::depot-tools $PLATFORM $DEPOT_TOOLS_URL $DEPOT_TOOLS_DIR
 
 if [ ! -z $BRANCH ]; then
-  REVISION=$(git ls-remote $REPO_URL --heads $BRANCH | head -1 | awk '{print $1}') || \
-    { echo "Cound not get branch revision" && exit 1; }
+    REVISION=$(git ls-remote $REPO_URL --heads $BRANCH | head -1 | awk '{print $1}') || \
+        { echo "Cound not get branch revision" && exit 1; }
    echo "Building branch: $BRANCH"
 else
-  REVISION=${REVISION:-$(latest-rev $REPO_URL)} || \
-    { echo "Could not get latest revision" && exit 1; }
+    REVISION=${REVISION:-$(latest-rev $REPO_URL)} || \
+        { echo "Could not get latest revision" && exit 1; }
 fi
 echo "Building revision: $REVISION"
 REVISION_NUMBER=$(revision-number $REPO_URL $REVISION) || \
-  { echo "Could not get revision number" && exit 1; }
+    { echo "Could not get revision number" && exit 1; }
 echo "Associated revision number: $REVISION_NUMBER"
 
 if [ $BUILD_ONLY = 0 ]; then
-  echo "Checking out WebRTC revision (this will take a while): $REVISION"
-  checkout "$TARGET_OS" $OUTDIR $REVISION
+    echo "Checking out WebRTC revision (this will take a while): $REVISION"
+    checkout "$TARGET_OS" $OUTDIR $REVISION
 
-  echo Checking WebRTC dependencies
-  check::webrtc::deps $PLATFORM $OUTDIR "$TARGET_OS"
+    echo Checking WebRTC dependencies
+    check::webrtc::deps $PLATFORM $OUTDIR "$TARGET_OS"
 
-  echo Patching WebRTC source
-  patch $PLATFORM $OUTDIR $ENABLE_RTTI
+    echo Patching WebRTC source
+    patch $PLATFORM $OUTDIR $ENABLE_RTTI
 fi
 
 echo Compiling WebRTC
@@ -130,10 +130,10 @@ PACKAGE_VERSION=$(interpret-pattern "$PACKAGE_VERSION_PATTERN" "$PLATFORM" "$OUT
 echo "Packaging WebRTC: $PACKAGE_FILENAME"
 package::prepare $PLATFORM $OUTDIR $PACKAGE_FILENAME $DIR/resource "$CONFIGS" $REVISION_NUMBER
 if [ "$PACKAGE_AS_DEBIAN" = 1 ]; then
-  package::debian $OUTDIR $PACKAGE_FILENAME $PACKAGE_NAME $PACKAGE_VERSION "$(debian-arch $TARGET_CPU)"
+    package::debian $OUTDIR $PACKAGE_FILENAME $PACKAGE_NAME $PACKAGE_VERSION "$(debian-arch $TARGET_CPU)"
 else
-  package::archive $PLATFORM $OUTDIR $PACKAGE_FILENAME
-  package::manifest $PLATFORM $OUTDIR $PACKAGE_FILENAME
+    package::archive $PLATFORM $OUTDIR $PACKAGE_FILENAME
+    package::manifest $PLATFORM $OUTDIR $PACKAGE_FILENAME
 fi
 
 echo Build successful

@@ -89,6 +89,14 @@ echo "Host OS: $PLATFORM"
 echo "Target OS: $TARGET_OS"
 echo "Target CPU: $TARGET_CPU"
 
+python_major_version=$(python --version 2>&1 | awk '{print $2}' | awk -F. '{print $1}')
+
+if [[ $python_major_version != "2" ]]
+then
+    echo "ERROR: Python 2 needs to be in path. Detected python version: $python_major_version ($(python --version 2>&1))"
+    exit -1
+fi
+
 echo Checking build environment dependencies
 check::build::env $PLATFORM "$TARGET_CPU"
 

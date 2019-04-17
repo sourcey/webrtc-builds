@@ -36,21 +36,42 @@ then
     # Put ccache in front so it uses ccache
     export PATH=`pwd`/ccache:$ORIG_PATH
 
+    ios_extra_build_flags=
+
     for arch in ${ios_archs[@]}
     do
-        ./build.sh -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -d -b branch-heads/64 -c ${arch} -t ios -x
+        if [[ -d out/ios/src ]]
+        then
+            ios_extra_build_flags=-x
+        fi
+
+        ./build.sh -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -d -b branch-heads/64 -c ${arch} -t ios ${ios_extra_build_flags}
     done
 
     # No ccache for Android build for now
     export PATH=$ORIG_PATH
 
+    android_extra_build_flags=
+
     for arch in ${android_archs[@]}
     do
-        ./build.sh -a 1 -e 1 -d -b branch-heads/64 -c ${arch} -t android -x
+        if [[ -d out/android/src ]]
+        then
+            android_extra_build_flags=-x
+        fi
+
+        ./build.sh -a 1 -e 1 -d -b branch-heads/64 -c ${arch} -t android ${android_extra_build_flags}
     done
 fi
 
 # Put ccache in front so it uses ccache
 export PATH=`pwd`/ccache:$ORIG_PATH
 
-./build.sh -a 1 -e 1 -d -b branch-heads/64 -x
+host_extra_build_flags=
+
+if [[ -d out/mac/src ]]
+then
+    host_extra_build_flags=-x
+fi
+
+./build.sh -a 1 -e 1 -d -b branch-heads/64 ${host_extra_build_flags}

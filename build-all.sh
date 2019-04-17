@@ -28,21 +28,29 @@ android_archs=(\
     x86_64\
 )
 
-# Put ccache in front so it uses ccache
-export PATH=`pwd`/ccache:$PATH
+ORIG_PATH=$PATH
 
 # Only try to build mobile platforms on Mac
 if [[ $host_platform == "osx" ]]
 then
+    # Put ccache in front so it uses ccache
+    export PATH=`pwd`/ccache:$ORIG_PATH
+
     for arch in ${ios_archs[@]}
     do
         ./build.sh -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -d -b branch-heads/64 -c ${arch} -t ios -x
     done
+
+    # No ccache for Android build for now
+    export PATH=$ORIG_PATH
 
     for arch in ${android_archs[@]}
     do
         ./build.sh -a 1 -e 1 -d -b branch-heads/64 -c ${arch} -t android -x
     done
 fi
+
+# Put ccache in front so it uses ccache
+export PATH=`pwd`/ccache:$ORIG_PATH
 
 ./build.sh -a 1 -e 1 -d -b branch-heads/64 -x

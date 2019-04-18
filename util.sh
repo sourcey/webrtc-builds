@@ -259,7 +259,7 @@ function patch() {
     # fi
 
     # Delete line which asserts that cannot run on OSX
-    if [[ $TARGET_OS == "osx" ]] || [[ $TARGET_OS == "ios" ]] || [[ $platfTARGET_OSorm == "iossim" ]]
+    if [[ $TARGET_OS == "osx" ]] || [[ $TARGET_OS == "ios" ]] || [[ $TARGET_OS == "iossim" ]]
     then
         echo "#### Applying patches for OSX..."
         sed -i.bak -e '98d' build/config/mac/mac_sdk.gni
@@ -393,8 +393,9 @@ function combine::objects() {
 # $3: The output library name
 function combine::static() {
     local platform="$1"
-    local outputdir="$2"
-    local libname="$3"
+    local target_os="$2"
+    local outputdir="$3"
+    local libname="$4"
 
     echo $libname
     pushd $outputdir >/dev/null
@@ -413,6 +414,25 @@ function combine::static() {
         win)
             # TODO: Support VS 2017
             "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
+            ;;
+        mac)
+            if [[ $target_os == "mac" ]] || [[ $target_os == "ios" ]]
+            then
+                # Combine *.a static libraries
+                libtool -static -o $libname.a $(cat $libname.list)
+            else
+                # Combine *.a static libraries
+                echo "CREATE $libname.a" >$libname.ar
+                while read a; do
+                    echo "ADDLIB $a" >>$libname.ar
+                done <$libname.list
+                echo "SAVE" >>$libname.ar
+                echo "END" >>$libname.ar
+                cat $libname.ar
+                echo "ar -M < $libname.ar"
+                ar -M < $libname.ar
+                ranlib $libname.a
+            fi
             ;;
         *)
             # Combine *.a static libraries
@@ -488,7 +508,7 @@ function compile() {
 
             if [ $COMBINE_LIBRARIES = 1 ]; then
                 # Method 1: Merge the static .a/.lib libraries.
-                combine::static $platform "out/$target_cpu/$cfg" libwebrtc_full
+                combine::static $platform $target_os "out/$target_cpu/$cfg" libwebrtc_full
         
                 # Method 2: Merge .o/.obj objects to create the library, although results 
                 # have been inconsistent so the static merging method is default.

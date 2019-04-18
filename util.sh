@@ -260,7 +260,7 @@ function patch() {
     # fi
 
     # Delete line which asserts that cannot run on OSX
-    if [[ $TARGET_OS == "osx" ]] || [[ $TARGET_OS == "ios" ]] || [[ $TARGET_OS == "iossim" ]]
+    if [[ $platform == "mac" ]]
     then
         echo "#### Applying patches for OSX..."
         sed -i.bak -e '98d' build/config/mac/mac_sdk.gni

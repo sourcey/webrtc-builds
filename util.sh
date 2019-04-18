@@ -271,6 +271,8 @@ function patch() {
     # For iOS change bundle identifier
     if [[ $TARGET_OS == "ios" ]]
     then
+        sed -i.bak -e '172d' build/config/ios/ios_sdk.gni
+
         ios_plists=(\
                 examples/objc/AppRTCMobile/ios/Info.plist\
                 sdk/objc/Framework/Info.plist\

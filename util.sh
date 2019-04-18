@@ -177,12 +177,13 @@ function check::webrtc::deps() {
         # Automatically accepts ttf-mscorefonts EULA
         echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections
         sudo $outdir/src/build/install-build-deps.sh --no-syms --no-arm --no-chromeos-fonts --no-nacl --no-prompt
+
+        if [ $target_os = 'android' ]; then
+            sudo $outdir/src/build/install-build-deps-android.sh
+        fi
+
         ;;
     esac
-
-    if [ $target_os = 'android' ]; then
-        sudo $outdir/src/build/install-build-deps-android.sh
-    fi
 }
 
 # Check out a specific revision.

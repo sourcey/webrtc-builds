@@ -118,7 +118,7 @@ function check::build::env() {
         # for GNU version of cp: gcp
         which gcp || brew install coreutils
         ;;
-    linux)
+    linux*)
         if ! grep -v \# /etc/apt/sources.list | grep -q multiverse ; then
             echo "*** Warning: The Multiverse repository is probably not enabled ***"
             echo "*** which is required for things like msttcorefonts.           ***"
@@ -173,9 +173,13 @@ function check::webrtc::deps() {
     local target_os="$3"
 
     case $platform in
-    linux)
+    linux*)
         # Automatically accepts ttf-mscorefonts EULA
         echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections
+
+        # Patch this script to support Ubuntu 18.04
+        sed -i.bak -E 's/(artful)\)/\1|bionic\)/' build/install-build-deps.sh
+
         sudo $outdir/src/build/install-build-deps.sh --no-syms --no-arm --no-chromeos-fonts --no-nacl --no-prompt
 
         if [ $target_os = 'android' ]; then

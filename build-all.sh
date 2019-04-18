@@ -5,7 +5,7 @@ host_platform='Unknown'
 
 if [[ $os == "Darwin" ]]
 then
-	host_platform="osx"
+	host_platform="mac"
 elif [[ $os == "Linux" ]]
 then
 	host_platform="lin"
@@ -30,10 +30,13 @@ android_archs=(\
 
 ORIG_PATH=$PATH
 
+# Start within docker
+# docker run -v `pwd`:`pwd` -w `pwd` -i -t ubuntu
+
 for build in ${builds[@]}
 do
     # Only try to build mobile platforms on Mac
-    if [[ $host_platform == "osx" ]]
+    if [[ $host_platform == "mac" ]]
     then
         # Put ccache in front so it uses ccache
         export PATH=`pwd`/ccache:$ORIG_PATH
@@ -49,7 +52,10 @@ do
 
             ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b branch-heads/64 -c ${arch} -t ios ${ios_extra_build_flags} -n ${build}
         done
+    fi
 
+    if [[ $host_platform == "lin" ]]
+    then
         # No ccache for Android build for now
         export PATH=$ORIG_PATH
 
@@ -71,7 +77,7 @@ do
 
     host_extra_build_flags=
 
-    if [[ -d out/mac/src ]]
+    if [[ -d out/$host_platform/src ]]
     then
         host_extra_build_flags=-x
     fi

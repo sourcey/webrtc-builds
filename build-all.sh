@@ -22,10 +22,10 @@ ios_archs=(\
 )
 
 android_archs=(\
-    arm64-v8a\
-    armeabi-v7a\
+    arm64\
+    arm\
     x86\
-    x86_64\
+    x64\
 )
 
 ORIG_PATH=$PATH

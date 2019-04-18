@@ -28,6 +28,11 @@ android_archs=(\
     x64\
 )
 
+builds=(\
+    Debug\
+    Release\
+)
+
 ORIG_PATH=$PATH
 
 # Start within docker
@@ -51,6 +56,18 @@ do
             fi
 
             ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b branch-heads/64 -c ${arch} -t ios ${ios_extra_build_flags} -n ${build}
+        done
+
+        ios_bitcode_extra_build_flags=
+
+        for arch in ${ios_archs[@]}
+        do
+            if [[ -d out/ios-bitcode/src ]]
+            then
+                ios_bitcode_extra_build_flags=-x
+            fi
+
+            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b branch-heads/64 -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
         done
     fi
 

@@ -17,24 +17,25 @@ Usage:
 WebRTC automated build script.
 
 OPTIONS:
-   -o OUTDIR      Output directory. Default is 'out/<TARGET_OS>'
-   -b BRANCH      Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'nn' is the release number.
-   -r REVISION    Git SHA revision. Default is latest revision.
-   -t TARGET OS   The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
-   -c TARGET CPU  The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
-   -l BLACKLIST   List *.o objects to exclude from the static library.
-   -e ENABLE_RTTI Compile WebRTC with RTII enabled. Default is '1'.
-   -a ENABLE_CLANG Enable clang build
-   -i CODESIGN    Set the code sign identity for iOS provisioning (IOS_CODE_SIGNING_IDENTITY)
-   -n CONFIGS     Build configurations, space-separated. Default is 'Debug Release'. Other values can be 'Debug', 'Release'.
-   -x             Express build mode. Skip repo sync and dependency checks, just build, compile and package.
-   -D             [Linux] Generate a debian package
-   -d             Debug mode. Print all executed commands.
-   -h             Show this message
+   -o OUTDIR         Output directory. Default is 'out/<TARGET_OS>'
+   -b BRANCH         Latest revision on git branch. Overrides -r. Common branch names are 'branch-heads/nn', where 'nn' is the release number.
+   -r REVISION       Git SHA revision. Default is latest revision.
+   -t TARGET OS      The target os for cross-compilation. Default is the host OS such as 'linux', 'mac', 'win'. Other values can be 'android', 'ios'.
+   -c TARGET CPU     The target cpu for cross-compilation. Default is 'x64'. Other values can be 'x86', 'arm64', 'arm'.
+   -l BLACKLIST      List *.o objects to exclude from the static library.
+   -e ENABLE_RTTI    Compile WebRTC with RTII enabled. Default is '1'.
+   -a ENABLE_CLANG   Enable clang build
+   -i CODESIGN       Set the code sign identity for iOS provisioning (IOS_CODE_SIGNING_IDENTITY)
+   -n CONFIGS        Build configurations, space-separated. Default is 'Debug Release'. Other values can be 'Debug', 'Release'.
+   -y ENABLE_BITCODE Enable bitcode (Applies to iOS build only)
+   -x                Express build mode. Skip repo sync and dependency checks, just build, compile and package.
+   -D                [Linux] Generate a debian package
+   -d                Debug mode. Print all executed commands.
+   -h                Show this message
 EOF
 }
 
-while getopts :o:b:r:t:c:l:a:e:i:n:xDd OPTION; do
+while getopts :o:b:r:t:c:l:e:a:i:n:y:xDd OPTION; do
     case $OPTION in
     o) OUTDIR=$OPTARG ;;
     b) BRANCH=$OPTARG ;;
@@ -46,6 +47,8 @@ while getopts :o:b:r:t:c:l:a:e:i:n:xDd OPTION; do
     e) ENABLE_RTTI=$OPTARG ;;
     i) IOS_CODE_SIGNING_IDENTITY=$OPTARG ;;
     n) CONFIGS=$OPTARG ;;
+    y) ENABLE_BITCODE=$OPTARG ;;
+    x) BUILD_ONLY=1 ;;
     x) BUILD_ONLY=1 ;;
     D) PACKAGE_AS_DEBIAN=1 ;;
     d) DEBUG=1 ;;
@@ -63,6 +66,7 @@ IOS_CODE_SIGNING_IDENTITY=${IOS_CODE_SIGNING_IDENTITY:-}
 BUILD_ONLY=${BUILD_ONLY:-0}
 DEBUG=${DEBUG:-0}
 CONFIGS=${CONFIGS:-Debug Release}
+ENABLE_BITCODE=${ENABLE_BITCODE:-0}
 COMBINE_LIBRARIES=${COMBINE_LIBRARIES:-1}
 PACKAGE_AS_DEBIAN=${PACKAGE_AS_DEBIAN:-0}
 PACKAGE_FILENAME_PATTERN=${PACKAGE_FILENAME_PATTERN:-"webrtc-%rn%-%sr%-%to%-%tc%"}
@@ -74,12 +78,19 @@ DEPOT_TOOLS_DIR=$DIR/depot_tools
 TOOLS_DIR=$DIR/tools
 PATH=$DEPOT_TOOLS_DIR:$DEPOT_TOOLS_DIR/python276_bin:$PATH
 
+echo "ENABLE_BITCODE = ${ENABLE_BITCODE}"
 [ "$DEBUG" = 1 ] && set -x
 
 detect-platform
 TARGET_OS=${TARGET_OS:-$PLATFORM}
 TARGET_CPU=${TARGET_CPU:-x64}
-OUTDIR=${OUTDIR:-out/$TARGET_OS}
+
+if [[ ${ENABLE_BITCODE} -eq 1 ]]
+then
+    OUTDIR=${OUTDIR:-out/${TARGET_OS}_bitcode}
+else
+    OUTDIR=${OUTDIR:-out/${TARGET_OS}}
+fi
 
 mkdir -p $OUTDIR
 OUTDIR=$(cd $OUTDIR && pwd -P)

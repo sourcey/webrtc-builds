@@ -477,6 +477,9 @@ function compile() {
     # Build WebRTC with RTII enbled.
     [ $ENABLE_RTTI = 1 ] && common_args+=" use_rtti=true"
 
+    # Build WebRTC with bitcode. This only applies to iOS builds
+    [ $ENABLE_BITCODE = 1 ] && common_args+=" use_xcode_clang=true enable_ios_bitcode=true"
+
     # Set code 
     if [[ $IOS_CODE_SIGNING_IDENTITY != "" ]]
     then

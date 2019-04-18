@@ -473,7 +473,10 @@ function compile() {
     [ $ENABLE_RTTI = 1 ] && common_args+=" use_rtti=true"
 
     # Set code 
-    [ $IOS_CODE_SIGNING_IDENTITY != "" ] && common_args+=" ios_code_signing_identity=\"${IOS_CODE_SIGNING_IDENTITY}\""
+    if [[ $IOS_CODE_SIGNING_IDENTITY != "" ]]
+    then
+        common_args+=" ios_code_signing_identity=\"${IOS_CODE_SIGNING_IDENTITY}\""
+    fi
 
     # Static vs Dynamic CRT: When `is_component_build` is false static CTR will be
     # enforced.By default Debug builds are dynamic and Release builds are static.

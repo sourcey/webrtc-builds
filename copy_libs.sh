@@ -13,23 +13,22 @@ builds=(\
     Release\
 )
 
-ios_archs=(\
+archs=(\
     arm64\
     arm\
     x86\
     x64\
 )
 
-android_archs=(\
-    arm64\
-    arm\
-    x86\
-    x64\
+platforms=(
+    mac\
+    linux\
+    win\
 )
 
 for build in ${builds[@]}
 do
-    for arch in ${ios_archs[@]}
+    for arch in ${archs[@]}
     do
         if [[ -f out/ios/src/out/${arch}/${build}/libwebrtc_full.a ]]
         then
@@ -37,12 +36,29 @@ do
             mkdir -p ${out_dir}/ios/${arch}/${build}
             cp -p out/ios/src/out/${arch}/${build}/libwebrtc_full.a ${out_dir}/ios/${arch}/${build}/
         fi
-    done
 
-    # if [[ -f out/mac/src/out/${build}/libwebrtc_full.a ]]
-    # then
-    #     echo "Copying out/ios/src/out/${build}/libwebrtc_full.a to ${out_dir}/ios/${build}/..."
-    #     mkdir -p ${out_dir}/ios/${build}
-    #     cp -p out/ios/src/out/${build}/libwebrtc_full.a ${out_dir}/ios/${build}/
-    # fi
+        if [[ -f out/ios_bitcode/src/out/${arch}/${build}/libwebrtc_full.a ]]
+        then
+            echo "Copying out/ios_bitcode/src/out/${arch}/${build}/libwebrtc_full.a to ${out_dir}/ios/${arch}/${build}/libwebrtc_full-bitcode.a..."
+            mkdir -p ${out_dir}/ios/${arch}/${build}
+            cp -p out/ios_bitcode/src/out/${arch}/${build}/libwebrtc_full.a ${out_dir}/ios/${arch}/${build}/libwebrtc_full-bitcode.a
+        fi
+
+        if [[ -f out/android/src/out/${arch}/${build}/libwebrtc_full.a ]]
+        then
+            echo "Copying out/android/src/out/${arch}/${build}/libwebrtc_full.a to ${out_dir}/android/${arch}/${build}/..."
+            mkdir -p ${out_dir}/android/${arch}/${build}
+            cp -p out/android/src/out/${arch}/${build}/libwebrtc_full.a ${out_dir}/android/${arch}/${build}/
+        fi
+
+        for platform in ${platforms[@]}
+        do
+            if [[ -f out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a ]]
+            then
+                echo "Copying out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a to ${out_dir}/${platform}/${build}/..."
+                mkdir -p ${out_dir}/${platform}/${build}
+                cp -p out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a ${out_dir}/${platform}/${build}/
+            fi
+        done
+    done
 done

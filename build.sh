@@ -73,10 +73,22 @@ PACKAGE_FILENAME_PATTERN=${PACKAGE_FILENAME_PATTERN:-"webrtc-%rn%-%sr%-%to%-%tc%
 PACKAGE_NAME_PATTERN=${PACKAGE_NAME_PATTERN:-"webrtc"}
 PACKAGE_VERSION_PATTERN=${PACKAGE_VERSION_PATTERN:-"%rn%"}
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
-DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
-DEPOT_TOOLS_DIR=$DIR/depot_tools
+#DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
+#DEPOT_TOOLS_DIR=$DIR/depot_tools
 TOOLS_DIR=$DIR/tools
-PATH=$DEPOT_TOOLS_DIR:$DEPOT_TOOLS_DIR/python276_bin:$PATH
+PATH=python276_bin:$PATH
+
+if [[ -z ${DEPOT_TOOLS_DIR+x} ]]
+then
+    echo "DEPOT_TOOLS_DIR not defined. Exiting..."
+	exit -1
+fi
+
+if [[ ! -d $DEPOT_TOOLS_DIR ]]
+then
+    echo "FATAL: $DEPOT_TOOLS_DIR does not exist..."
+    exit -1
+fi
 
 echo "ENABLE_BITCODE = ${ENABLE_BITCODE}"
 [ "$DEBUG" = 1 ] && set -x
@@ -111,8 +123,8 @@ fi
 echo Checking build environment dependencies
 check::build::env $PLATFORM "$TARGET_CPU"
 
-echo Checking depot-tools
-check::depot-tools $PLATFORM $DEPOT_TOOLS_URL $DEPOT_TOOLS_DIR
+#echo Checking depot-tools
+# check::depot-tools $PLATFORM $DEPOT_TOOLS_URL $DEPOT_TOOLS_DIR
 
 if [ ! -z $BRANCH ]; then
     REVISION=$(git ls-remote $REPO_URL --heads $BRANCH | head -1 | awk '{print $1}') || \

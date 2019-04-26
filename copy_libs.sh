@@ -55,9 +55,9 @@ do
         do
             if [[ -f out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a ]]
             then
-                echo "Copying out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a to ${out_dir}/${platform}/${build}/..."
-                mkdir -p ${out_dir}/${platform}/${build}
-                cp -p out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a ${out_dir}/${platform}/${build}/
+                echo "Copying out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a to ${out_dir}/${platform}/${arch}/${build}/..."
+                mkdir -p ${out_dir}/${platform}/${arch}/${build}
+                cp -p out/${platform}/src/out/${arch}/${build}/libwebrtc_full.a ${out_dir}/${platform}/${arch}/${build}/
             fi
         done
     done

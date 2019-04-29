@@ -91,6 +91,7 @@ then
 fi
 
 echo "ENABLE_BITCODE = ${ENABLE_BITCODE}"
+
 [ "$DEBUG" = 1 ] && set -x
 
 detect-platform

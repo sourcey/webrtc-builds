@@ -14,11 +14,16 @@ then
 	host_platform="win"
 fi
 
+#ios_archs=(\
+#    arm64\
+#    arm\
+#    x86\
+#    x64\
+#)
+
 ios_archs=(\
     arm64\
     arm\
-    x86\
-    x64\
 )
 
 builds=(\
@@ -52,3 +57,4 @@ do
         done
     fi
 done
+

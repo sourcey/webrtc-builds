@@ -184,6 +184,7 @@ function check::webrtc::deps() {
 
         if [ $target_os = 'android' ]; then
             sudo $outdir/src/build/install-build-deps-android.sh
+            $outdir/src/build/linux/sysroot_scripts/install-sysroot.py --running-as-hook --all
         fi
 
         ;;
@@ -228,6 +229,15 @@ function checkout() {
     # git reset --hard
     git clean -f
     popd >/dev/null
+    
+    if [[ $target_os == "android" ]]
+    then
+        # Patch for android
+        sed -i.bak -E 's/^(    shutil.rmtree\(outdir\))$/    try:\n  \1\n    except:\n      pass/' src/third_party/binutils/download.py
+        pushd src/third_party/binutils
+        git add download.py
+        popd
+    fi
 
     # Checkout the specific revision after fetch
     gclient sync --nohooks --revision $revision

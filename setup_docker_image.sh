@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-pushd webrtc-builds-android
 apt-get update
 
 apt-get -y install python\
@@ -10,5 +9,159 @@ apt-get -y install python\
 	git\
 	zip\
 	unzip\
-    vim
+    vim\
+    curl\
+    wget\
+    software-properties-common
 
+apt-get -y install\
+    pkg-config\
+    libssl-dev\
+    libnss3-dev\
+    libx11-dev\
+    libexpat1-dev\
+    libasound2
+
+apt-get -y install\
+    gcc-5\
+    g++-5
+
+apt-get -y install\
+    binutils*
+
+#update-alternatives --install /usr/bin/ld ld /usr/lib/binutils-2.26/bin/ld 90
+
+apt-get -y install\
+    libpci3:i386\
+    linux-libc-dev:i386\
+    apache2-bin\
+    appmenu-gtk2-module\
+    binutils-aarch64-linux-gnu\
+    binutils-arm-linux-gnueabihf\
+    binutils-mips64el-linux-gnuabi64\
+    binutils-mipsel-linux-gnu\
+    bison\
+    cdbs\
+    devscripts\
+    dpkg-dev\
+    elfutils\
+    fakeroot\
+    flex\
+    fonts-ipafont\
+    fonts-thai-tlwg\
+    g++\
+    git-core\
+    git-svn\
+    gperf\
+    libapache2-mod-php5\
+    libasound2\
+    libasound2-dev\
+    libatk1.0-0\
+    libav-tools\
+    libbluetooth-dev\
+    libbrlapi-dev\
+    libbrlapi0.6\
+    libbz2-1.0\
+    libbz2-dev\
+    libc6\
+    libcairo2\
+    libcairo2-dev\
+    libcap-dev\
+    libcap2\
+    libcups2\
+    libcups2-dev\
+    libcurl4-gnutls-dev\
+    libdconf-dev\
+    libdconf1\
+    libdrm-dev\
+    libelf-dev\
+    libexpat1\
+    libffi-dev\
+    libffi6\
+    libfontconfig1\
+    libfreetype6\
+    libgbm-dev\
+    libgconf2-dev\
+    libgl1-mesa-dev\
+    libgles2-mesa-dev\
+    libglib2.0-0\
+    libglib2.0-dev\
+    libglu1-mesa-dev\
+    libgnome-keyring-dev\
+    libgnome-keyring0\
+    libgtk-3-0\
+    libgtk-3-dev\
+    libgtk2.0-0\
+    libgtk2.0-dev\
+    libjpeg-dev\
+    libkrb5-dev\
+    libnspr4\
+    libnspr4-dev\
+    libnss3\
+    libnss3-dev\
+    libpam0g\
+    libpam0g-dev\
+    libpango1.0-0\
+    libpci-dev\
+    libpci3\
+    libpcre3\
+    libpixman-1-0\
+    libpng16-16\
+    libpulse-dev\
+    libpulse0\
+    libsctp-dev\
+    libspeechd-dev\
+    libspeechd2\
+    libsqlite3-0\
+    libsqlite3-dev\
+    libssl-dev\
+    libstdc++6\
+    libudev-dev\
+    libudev1\
+    libwww-perl\
+    libx11-6\
+    libx11-xcb1\
+    libxau6\
+    libxcb1\
+    libxcomposite1\
+    libxcursor1\
+    libxdamage1\
+    libxdmcp6\
+    libxext6\
+    libxfixes3\
+    libxi6\
+    libxinerama1\
+    libxkbcommon-dev\
+    libxrandr2\
+    libxrender1\
+    libxslt1-dev\
+    libxss-dev\
+    libxt-dev\
+    libxtst-dev\
+    libxtst6\
+    locales\
+    mesa-common-dev\
+    openbox\
+    patch\
+    perl\
+    php5-cgi\
+    pkg-config\
+    python\
+    python-cherrypy3\
+    python-crypto\
+    python-dev\
+    python-numpy\
+    python-opencv\
+    python-openssl\
+    python-psutil\
+    python-yaml\
+    realpath\
+    rpm\
+    ruby\
+    subversion\
+    ttf-mscorefonts-installer\
+    wdiff\
+    x11-utils\
+    xcompmgr\
+    zip\
+    zlib1g

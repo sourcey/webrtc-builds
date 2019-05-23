@@ -379,8 +379,18 @@ function combine::static() {
     # Combine all objects into one static library
     case $platform in
     win)
-      # TODO: Support VS 2017
-      "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
+      # Support VS 2017, https://devblogs.microsoft.com/cppblog/finding-the-visual-c-compiler-tools-in-visual-studio-2017/
+      vs2017_config_file="C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"
+      if [ -e "$vs2017_config_file" ]; then
+        vs2017_version=`cat "$vs2017_config_file"`
+        vslib="C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/$vs2017_version/bin/Host$TARGET_CPU/$TARGET_CPU/lib"
+      elif [ ! -z "$VS140COMNTOOLS" ]; then
+        vslib="$VS140COMNTOOLS../../VC/bin/lib"
+      else
+        echo "Building under Microsoft Windows requires Microsoft Visual Studio 2015 Update 3"
+        exit 1
+      fi
+      "$vslib" /OUT:$libname.lib @$libname.list
       ;;
     *)
       # Combine *.a static libraries

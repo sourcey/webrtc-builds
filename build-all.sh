@@ -3,6 +3,8 @@
 os=`uname`
 host_platform='Unknown'
 
+branch_head='branch-heads/m79'
+
 if [[ $os == "Darwin" ]]
 then
 	host_platform="mac"
@@ -55,7 +57,7 @@ do
                 ios_extra_build_flags=-x
             fi
 
-            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b branch-heads/64 -c ${arch} -t ios ${ios_extra_build_flags} -n ${build}
+            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_extra_build_flags} -n ${build}
         done
 
         ios_bitcode_extra_build_flags=
@@ -67,7 +69,7 @@ do
                 ios_bitcode_extra_build_flags=-x
             fi
 
-            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b branch-heads/64 -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
+            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
         done
     fi
 
@@ -85,7 +87,7 @@ do
                 android_extra_build_flags=-x
             fi
 
-            ./build.sh -d -a 1 -e 1 -b branch-heads/64 -c ${arch} -t android ${android_extra_build_flags} -n ${build}
+            ./build.sh -d -a 1 -e 1 -b ${branch_head} -c ${arch} -t android ${android_extra_build_flags} -n ${build}
         done
     fi
 
@@ -99,5 +101,5 @@ do
         host_extra_build_flags=-x
     fi
 
-    ./build.sh -d -a 1 -e 1 -b branch-heads/64 ${host_extra_build_flags} -n ${build}
+    ./build.sh -d -a 1 -e 1 -b ${branch_head} ${host_extra_build_flags} -n ${build}
 done

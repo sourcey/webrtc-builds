@@ -74,7 +74,7 @@ PACKAGE_NAME_PATTERN=${PACKAGE_NAME_PATTERN:-"webrtc"}
 PACKAGE_VERSION_PATTERN=${PACKAGE_VERSION_PATTERN:-"%rn%"}
 REPO_URL="https://chromium.googlesource.com/external/webrtc"
 #DEPOT_TOOLS_URL="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
-#DEPOT_TOOLS_DIR=$DIR/depot_tools
+DEPOT_TOOLS_DIR=$DIR/depot_tools
 TOOLS_DIR=$DIR/tools
 PATH=python276_bin:$PATH
 
@@ -132,11 +132,11 @@ if [ ! -z $BRANCH ]; then
         { echo "Cound not get branch revision" && exit 1; }
    echo "Building branch: $BRANCH"
 else
-    REVISION=${REVISION:-$(latest-rev $REPO_URL)} || \
+    REVISION=${REVISION:-$(latest-rev "$REPO_URL")} || \
         { echo "Could not get latest revision" && exit 1; }
 fi
 echo "Building revision: $REVISION"
-REVISION_NUMBER=$(revision-number $REPO_URL $REVISION) || \
+REVISION_NUMBER=$(revision-number "$REPO_URL" "$REVISION") || \
     { echo "Could not get revision number" && exit 1; }
 echo "Associated revision number: $REVISION_NUMBER"
 

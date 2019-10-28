@@ -242,7 +242,10 @@ function checkout() {
     # Checkout the specific revision after fetch
     gclient sync --nohooks --revision $revision
 
-    ./src/build/install-build-deps.sh --unsupported --no-syms --no-arm --no-chromeos-fonts --no-nacl
+    if [[ `uname` != [Dd]arwin* ]]
+    then
+        ./src/build/install-build-deps.sh --unsupported --no-syms --no-arm --no-chromeos-fonts --no-nacl
+    fi
 
     gclient runhooks
 

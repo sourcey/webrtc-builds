@@ -37,6 +37,8 @@ builds=(\
 
 ORIG_PATH=$PATH
 
+signing_key=23099743C8BA1794F2740232AEB790196C08A522
+
 # Start within docker
 # docker run -v `pwd`:`pwd` -w `pwd` -i -t ubuntu
 
@@ -57,7 +59,7 @@ do
                 ios_extra_build_flags=-x
             fi
 
-            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_extra_build_flags} -n ${build}
+            ./build.sh -d -i ${signing_key} -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_extra_build_flags} -n ${build}
         done
 
         ios_bitcode_extra_build_flags=
@@ -69,7 +71,7 @@ do
                 ios_bitcode_extra_build_flags=-x
             fi
 
-            ./build.sh -d -i 41963FD7D65A2DE291B7DF06CD161F797057A93D -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
+            ./build.sh -d -i ${signing_key} -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
         done
     fi
 

@@ -292,17 +292,20 @@ function patch() {
     then
         sed -i.bak -e '172d' build/config/ios/ios_sdk.gni
 
-        ios_plists=(\
-                examples/objc/AppRTCMobile/ios/Info.plist\
-                sdk/objc/Framework/Info.plist\
-        )
+        ios_plists=$(find . -name 'Info.plist')
 
         echo "#### Changing bundle indentifier..."
         for plist in ${ios_plists[@]}
         do
                 sed -i.bak 's/com\.google\.AppRTCMobile/com\.paltalk\.paltalkvideo/g' ${plist}
                 sed -i.bak 's/org\.webrtc\.WebRTC/com\.paltalk\.paltalkvideo/g' ${plist}
-                git add ${plist}
+                set +e
+                git check-ignore ${plist}
+                if [[ $? -eq 1 ]]
+                then
+                    git add ${plist}
+                fi
+                set -e
         done
     fi
 

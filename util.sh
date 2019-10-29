@@ -289,6 +289,11 @@ function patch() {
         pushd build/config/mac
         git add mac_sdk.gni
         popd
+
+        sed -i.bak -e '47,48d' build/toolchain/toolchain.gni
+        pushd build/toolchain
+        git add toolchain.gni
+        popd
     fi
 
     # For iOS change bundle identifier

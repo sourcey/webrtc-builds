@@ -298,8 +298,7 @@ function patch() {
         git add toolchain.gni
         popd
 
-        sed -i.bak -e '1122,1125d'  build/config/compiler/BUILD.gn
-        sed -i.bak -e '1117,1118d'  build/config/compiler/BUILD.gn
+        sed -i.bak -e '1116,1125d'  build/config/compiler/BUILD.gn
         pushd build/config/compiler
         git add BUILD.gn
         popd

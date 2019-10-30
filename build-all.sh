@@ -25,6 +25,11 @@ ios_archs=(\
     x64\
 )
 
+ios_bitcode_archs=(\
+    arm64\
+    arm\
+)
+
 android_archs=(\
     arm64\
     arm\
@@ -46,7 +51,7 @@ signing_key=23099743C8BA1794F2740232AEB790196C08A522
 
 for build in ${builds[@]}
 do
-    # Only try to build mobile platforms on Mac
+    Only try to build mobile platforms on Mac
     if [[ $host_platform == "mac" ]]
     then
         # Put ccache in front so it uses ccache
@@ -66,7 +71,7 @@ do
 
         ios_bitcode_extra_build_flags=
 
-        for arch in ${ios_archs[@]}
+        for arch in ${ios_bitcode_archs[@]}
         do
             if [[ -d out/ios-bitcode/src ]]
             then

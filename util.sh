@@ -178,7 +178,7 @@ function check::webrtc::deps() {
         echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections
 
         # Patch this script to support Ubuntu 18.04
-        sed -i.bak -E 's/(artful)\)/\1|bionic\)/' build/install-build-deps.sh
+        sed -i.bak -E 's/(artful)\)/\1|bionic\)/' $outdir/src/build/install-build-deps.sh
 
         sudo $outdir/src/build/install-build-deps.sh --no-syms --no-arm --no-chromeos-fonts --no-nacl --no-prompt
 

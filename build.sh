@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export VPYTHON_BYPASS="manually managed python not supported by chrome operations"  
+
 set -o errexit
 set -o nounset
 set -o pipefail

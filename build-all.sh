@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export VPYTHON_BYPASS="manually managed python not supported by chrome operations"  
+
 os=`uname`
 host_platform='Unknown'
 

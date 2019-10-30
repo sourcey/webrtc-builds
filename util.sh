@@ -267,6 +267,9 @@ function patch() {
     # This removes the examples from being built.
     sed -i.bak 's|"//webrtc/examples",|#"//webrtc/examples",|' BUILD.gn
     sed -i.bak -E 's/^(      cflags = \[ "-fvisibility-global-new-delete-hidden" \])$/#\1/g' buildtools/third_party/libc++/BUILD.gn
+    pushd buildtools/third_party/libc++
+    git add BUILD.gn
+    popd
 
     # This patches a GN error with the video_loopback executable depending on a
     # test but since we disable building tests GN detects a dependency error.
@@ -293,6 +296,12 @@ function patch() {
         sed -i.bak -e '47,48d' build/toolchain/toolchain.gni
         pushd build/toolchain
         git add toolchain.gni
+        popd
+
+        sed -i.bak -e '1122,1125d'  build/config/compiler/BUILD.gn
+        sed -i.bak -e '1117,1118d'  build/config/compiler/BUILD.gn
+        pushd build/config/compiler
+        git add BUILD.gn
         popd
     fi
 

@@ -332,8 +332,11 @@ function patch() {
 
     if [[ $TARGET_OS == "android" ]]
     then
-        sed -i .bak -E 's/last_commit_timestamp = int\(open\(lastchange_file\)\.read\(\)\)/last_commit_timestamp = (datetime.datetime.utcnow() - datetime.datetime(1970, 1, 1)).total_seconds()/g' build/compute_build_timestamp.py
-        git add build/compute_build_timestamp.py
+        # If we don't have a commit time written in that file, write one
+        if [[ ! -f build/util/LASTCHANGE.committime ]]
+        then
+            date --date="yesterday" +%s > build/util/LASTCHANGE.committime
+        fi
     fi
 
     sed -i.bak 's/      "examples",//' BUILD.gn

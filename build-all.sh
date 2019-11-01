@@ -51,7 +51,7 @@ signing_key=23099743C8BA1794F2740232AEB790196C08A522
 
 for build in ${builds[@]}
 do
-    Only try to build mobile platforms on Mac
+    # Only try to build mobile platforms on Mac
     if [[ $host_platform == "mac" ]]
     then
         # Put ccache in front so it uses ccache

@@ -148,7 +148,7 @@ if [ $BUILD_ONLY = 0 ]; then
     checkout "$TARGET_OS" $OUTDIR $REVISION
 
     echo Checking WebRTC dependencies
-    check::webrtc::deps $PLATFORM $OUTDIR "$TARGET_OS"
+    check::webrtc::deps $PLATFORM $OUTDIR "$TARGET_OS" "$ARCH"
 
     echo Patching WebRTC source
     patch $PLATFORM $OUTDIR $ENABLE_RTTI

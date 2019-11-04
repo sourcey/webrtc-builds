@@ -341,7 +341,7 @@ function patch() {
     git add BUILD.gn
 
     clang_base_escaped=$(echo "$HOME/ccache" | sed 's/\//\\\//g')
-    sed -E -i .bak 's/^(default_clang_base_path = ).+$/\1"'"${clang_base_escaped}"'"/' build/config/clang/clang.gni
+    sed -E -i.bak 's/^(default_clang_base_path = ).+$/\1"'"${clang_base_escaped}"'"/' build/config/clang/clang.gni
 
     popd >/dev/null
 }

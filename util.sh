@@ -328,14 +328,14 @@ function patch() {
         done
     fi
 
-    if [[ $TARGET_OS == "android" ]]
-    then
-        # If we don't have a commit time written in that file, write one
-        if [[ ! -f build/util/LASTCHANGE.committime ]]
-        then
-            date --date="yesterday" +%s > build/util/LASTCHANGE.committime
-        fi
-    fi
+    # if [[ $TARGET_OS == "android" ]]
+    # then
+    #     # If we don't have a commit time written in that file, write one
+    #     if [[ ! -f build/util/LASTCHANGE.committime ]]
+    #     then
+    #         date --date="yesterday" +%s > build/util/LASTCHANGE.committime
+    #     fi
+    # fi
 
     sed -i.bak 's/      "examples",//' BUILD.gn
     git add BUILD.gn

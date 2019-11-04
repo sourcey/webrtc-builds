@@ -171,7 +171,6 @@ function check::webrtc::deps() {
     local platform="$1"
     local outdir="$2"
     local target_os="$3"
-    local arch="$4"
 
     case $platform in
     linux*)
@@ -185,8 +184,7 @@ function check::webrtc::deps() {
 
         if [ $target_os = 'android' ]; then
             sudo $outdir/src/build/install-build-deps-android.sh
-            # $outdir/src/build/linux/sysroot_scripts/install-sysroot.py --running-as-hook --all
-            $outdir/src/build/linux/sysroot_scripts/install-sysroot.py --arch=${arch} --all
+            $outdir/src/build/linux/sysroot_scripts/install-sysroot.py --all
         fi
 
         ;;

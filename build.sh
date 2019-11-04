@@ -142,13 +142,12 @@ echo "Building revision: $REVISION"
 REVISION_NUMBER=$(revision-number "$REPO_URL" "$REVISION") || \
     { echo "Could not get revision number" && exit 1; }
 echo "Associated revision number: $REVISION_NUMBER"
-
 if [ $BUILD_ONLY = 0 ]; then
     echo "Checking out WebRTC revision (this will take a while): $REVISION"
     checkout "$TARGET_OS" $OUTDIR $REVISION
 
     echo Checking WebRTC dependencies
-    check::webrtc::deps $PLATFORM $OUTDIR "$TARGET_OS" "$ARCH"
+    check::webrtc::deps $PLATFORM $OUTDIR "$TARGET_OS"
 
     echo Patching WebRTC source
     patch $PLATFORM $OUTDIR $ENABLE_RTTI

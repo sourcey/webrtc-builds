@@ -18,6 +18,8 @@ then
 	host_platform="win"
 fi
 
+set -euo pipefail
+
 ios_archs=(\
     arm64\
     arm\

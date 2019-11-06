@@ -304,9 +304,16 @@ function patch() {
         pushd build/config/compiler
         git add BUILD.gn
         popd
-    elif f [[ $TARGET_OS == "android" ]]
+    elif [[ $TARGET_OS == "android" ]]
+    then
         sed -i.bak -e '1116,1130d'  build/config/compiler/BUILD.gn
         pushd build/config/compiler
+        git add BUILD.gn
+        popd
+
+        sed -i.bak -e '236,252d'  rtc_tools/BUILD.gn
+        sed -i.bak -e '25d'  rtc_tools/BUILD.gn
+        pushd rtc_tools
         git add BUILD.gn
         popd
     fi

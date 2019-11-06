@@ -304,7 +304,13 @@ function patch() {
         pushd build/config/compiler
         git add BUILD.gn
         popd
+    elif f [[ $TARGET_OS == "android" ]]
+        sed -i.bak -e '1116,1130d'  build/config/compiler/BUILD.gn
+        pushd build/config/compiler
+        git add BUILD.gn
+        popd
     fi
+
 
     # For iOS change bundle identifier
     if [[ $TARGET_OS == "ios" ]]

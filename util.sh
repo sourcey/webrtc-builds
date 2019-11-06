@@ -330,20 +330,45 @@ function patch() {
         done
     fi
 
-    # if [[ $TARGET_OS == "android" ]]
-    # then
-    #     # If we don't have a commit time written in that file, write one
-    #     if [[ ! -f build/util/LASTCHANGE.committime ]]
-    #     then
-    #         date --date="yesterday" +%s > build/util/LASTCHANGE.committime
-    #     fi
-    # fi
+    if [[ $TARGET_OS == "android" ]]
+    then
+        # If we don't have a commit time written in that file, write one
+        if [[ ! -f build/util/LASTCHANGE.committime ]]
+        then
+            sed -i.bak -e '31,34d' build/timestamp.gni
+            echo 'build_timestamp="1572921264"' >> build/timestamp.gni
+            pushd build
+            git add timestamp.gni
+            popd
+         
+            # date --date="yesterday" +%s > build/util/LASTCHANGE.committime
+            # python build/util/lastchange.py | awk -F= '{print $2}' > build/util/LASTCHANGE.committime
+        fi
+
+        # TODO: Remove the following from files
+        #in /build/config/compiler/BUILD.gn
+        # cflags += [ "-fcrash-diagnostics-dir=" +
+        #     rebase_path("//tools/clang/crashreports", root_build_dir) ]
+
+        # if (is_clang && !is_nacl && target_os != "chromeos" && !use_xcode_clang &&
+        #     (is_win || use_custom_libcxx)) {
+        #     cflags += [ "-fcomplete-member-pointers" ]
+        # }
+
+        # cflags += [ "-mno-outline" ]
+
+        clang_base_escaped=$(echo '../../../third_party/android_ndk/toolchains/llvm/prebuilt/linux-x86_64' | sed 's/\//\\\//g')
+    else
+        clang_base_escaped=$(echo "$HOME/ccache" | sed 's/\//\\\//g')
+    fi
 
     sed -i.bak 's/      "examples",//' BUILD.gn
     git add BUILD.gn
 
-    clang_base_escaped=$(echo "$HOME/ccache" | sed 's/\//\\\//g')
-    sed -E -i.bak 's/^(default_clang_base_path = ).+$/\1"'"${clang_base_escaped}"'"/' build/config/clang/clang.gni
+    pushd build/config/clang
+    sed -E -i.bak 's/^(default_clang_base_path = ).+$/\1"'"${clang_base_escaped}"'"/' clang.gni
+    git add clang.gni
+    popd
 
     popd >/dev/null
 }

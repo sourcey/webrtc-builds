@@ -182,6 +182,8 @@ function check::webrtc::deps() {
 
         sudo $outdir/src/build/install-build-deps.sh --no-syms --no-arm --no-chromeos-fonts --no-nacl --no-prompt
 
+        sudo apt-get install ccache
+
         if [ $target_os = 'android' ]; then
             sudo $outdir/src/build/install-build-deps-android.sh
             $outdir/src/build/linux/sysroot_scripts/install-sysroot.py --all

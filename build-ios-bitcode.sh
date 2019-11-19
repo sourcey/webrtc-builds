@@ -3,6 +3,8 @@
 os=`uname`
 host_platform='Unknown'
 
+branch_head='branch-heads/m79'
+
 if [[ $os == "Darwin" ]]
 then
 	host_platform="mac"
@@ -55,7 +57,7 @@ do
                 ios_bitcode_extra_build_flags=-x
             fi
 
-            ./build.sh -d -i ${signing_key} -a 1 -e 1 -b branch-heads/64 -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
+            ./build.sh -d -i ${signing_key} -a 1 -e 1 -b ${branch_head} -c ${arch} -t ios ${ios_bitcode_extra_build_flags} -n ${build} -y 1
         done
     fi
 done

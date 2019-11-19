@@ -52,7 +52,7 @@ do
 
         for arch in ${ios_archs[@]}
         do
-            if [[ -d out/ios-bitcode/src ]]
+            if [[ -d out/ios_bitcode/src ]]
             then
                 ios_bitcode_extra_build_flags=-x
             fi

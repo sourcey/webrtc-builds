@@ -324,15 +324,18 @@ function patch() {
     then
         sed -i.bak -e '172d' build/config/ios/ios_sdk.gni
 
-        ios_plists=$(find . -name 'Info.plist')
+        ios_plists=(\
+                examples/objc/AppRTCMobile/ios/Info.plist\
+                sdk/objc/Info.plist\
+        )
 
         echo "#### Changing bundle indentifier..."
         for plist in ${ios_plists[@]}
         do
                 # sed -i.bak 's/com\.google\.AppRTCMobile/com\.paltalk\.paltalkvideo/g' ${plist}
                 # sed -i.bak 's/org\.webrtc\.WebRTC/com\.paltalk\.paltalkvideo/g' ${plist}
-                sed -i.bak 's/com\.google\.AppRTCMobile/com\.peerstream\.PSPClient/g' ${plist}
-                sed -i.bak 's/org\.webrtc\.WebRTC/com\.peerstream\.PSPClient/g' ${plist}
+                sed -i.bak -E 's/com\.google\.AppRTCMobile/com\.peerstream\.PSPClient/g' ${plist}
+                sed -i.bak -E 's/org\.webrtc\.WebRTC/com\.peerstream\.PSPClient/g' ${plist}
                 set +e
                 git check-ignore ${plist}
                 if [[ $? -eq 1 ]]

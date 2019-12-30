@@ -74,6 +74,10 @@ function init-msenv() {
     # lack of VS1S0COMNTOOLS environment variable.
     if [ -d "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build" ]; then
         vcvars_path="C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build"
+    elif [ -d "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build" ]; then
+        vcvars_path="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build"
+    elif [ ! -z "$VS160COMNTOOLS" ]; then
+        vcvars_path="${VS160COMNTOOLS}../../VC"
     elif [ ! -z "$VS140COMNTOOLS" ]; then
         vcvars_path="${VS140COMNTOOLS}../../VC"
     else
@@ -456,8 +460,8 @@ function combine::objects() {
         # Combine all objects into one static library
         case $platform in
         win)
-            # TODO: Support VS 2017
-            "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
+            # TODO: Support VS 2019
+            "$VS160COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
             ;;
         *)
             # Combine *.o objects using ar
@@ -510,8 +514,8 @@ function combine::static() {
         # Combine all objects into one static library
         case $platform in
         win)
-            # TODO: Support VS 2017
-            "$VS140COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
+            # TODO: Support VS 2019
+            "$VS160COMNTOOLS../../VC/bin/lib" /OUT:$libname.lib @$libname.list
             ;;
         mac)
             if [[ $target_os == "mac" ]] || [[ $target_os == "ios" ]]
